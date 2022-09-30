@@ -25,7 +25,7 @@ export default async (on: Cypress.PluginEvents, config: Cypress.PluginConfigOpti
 
   on('task', {
     lighthouse: lighthouse(lighthouseReport => {
-      !existsSync('build/cypress') && mkdirSync('build/cypress', { recursive: true });
+      !existsSync('build/cypress/') && mkdirSync('build/cypress/', { recursive: true });
       writeFileSync('build/cypress/lhreport.html', ReportGenerator.generateReport(lighthouseReport.lhr, 'html'));
     }),
     pa11y: pa11y(),

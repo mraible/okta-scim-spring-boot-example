@@ -30,12 +30,12 @@ public interface BloodPressureRepository extends JpaRepository<BloodPressure, Lo
     }
 
     @Query(
-        value = "select distinct bloodPressure from BloodPressure bloodPressure left join fetch bloodPressure.user",
-        countQuery = "select count(distinct bloodPressure) from BloodPressure bloodPressure"
+        value = "select bloodPressure from BloodPressure bloodPressure left join fetch bloodPressure.user",
+        countQuery = "select count(bloodPressure) from BloodPressure bloodPressure"
     )
     Page<BloodPressure> findAllWithToOneRelationships(Pageable pageable);
 
-    @Query("select distinct bloodPressure from BloodPressure bloodPressure left join fetch bloodPressure.user")
+    @Query("select bloodPressure from BloodPressure bloodPressure left join fetch bloodPressure.user")
     List<BloodPressure> findAllWithToOneRelationships();
 
     @Query("select bloodPressure from BloodPressure bloodPressure left join fetch bloodPressure.user where bloodPressure.id =:id")

@@ -29,9 +29,9 @@ version = "0.0.1-SNAPSHOT"
 
 description = ""
 
-sourceCompatibility=11
-targetCompatibility=11
-assert System.properties["java.specification.version"] == "11" || "12" || "13" || "14" || "15" || "16" || "17" || "18"
+sourceCompatibility=17
+targetCompatibility=17
+assert System.properties["java.specification.version"] == "17" || "18" || "19"
 
 apply from: "gradle/docker.gradle"
 apply from: "gradle/sonar.gradle"
@@ -138,7 +138,7 @@ liquibase {
             username "HealthPoints"
             password ""
             changeLogFile project.ext.diffChangelogFile
-            referenceUrl "hibernate:spring:com.okta.developer.domain?dialect=org.hibernate.dialect.H2Dialect&hibernate.physical_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy&hibernate.implicit_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy"
+            referenceUrl "hibernate:spring:com.okta.developer.domain?dialect=org.hibernate.dialect.H2Dialect&hibernate.physical_naming_strategy=org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy&hibernate.implicit_naming_strategy=org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy"
             defaultSchemaName ""
             logLevel "debug"
             classpath "$buildDir/classes/java/main"
@@ -170,15 +170,22 @@ configurations {
         resolutionStrategy {
             // Inherited version from Spring Boot can't be used because of regressions:
             // To be removed as soon as spring-boot use the same version
-            force 'org.liquibase:liquibase-core:4.15.0'
+            force 'org.liquibase:liquibase-core:4.16.1'
         }
     }
 }
 
 repositories {
     // Local maven repository is required for libraries built locally with maven like development jhipster-bom.
-    // mavenLocal()
+    mavenLocal()
     mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots/"
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
     //jhipster-needle-gradle-repositories - JHipster will add additional repositories
 }
 
@@ -191,10 +198,11 @@ dependencies {
     // Use ", version: jhipsterDependenciesVersion, changing: true" if you want
     // to use a SNAPSHOT release instead of a stable release
     implementation group: "tech.jhipster", name: "jhipster-framework"
-    implementation "javax.annotation:javax.annotation-api"
+    implementation "jakarta.annotation:jakarta.annotation-api"
+    runtimeOnly "org.springframework.boot:spring-boot-properties-migrator"
     implementation "org.springframework.boot:spring-boot-starter-cache"
     implementation "com.fasterxml.jackson.module:jackson-module-jaxb-annotations"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-hibernate5"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-hibernate5-jakarta"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-hppc"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
     testImplementation "org.testcontainers:junit-jupiter"
@@ -204,10 +212,10 @@ dependencies {
     implementation "org.apache.commons:commons-lang3"
     implementation "javax.cache:cache-api"
     implementation "org.ehcache:ehcache"
-    implementation "org.hibernate:hibernate-jcache"
+    implementation "org.hibernate.orm:hibernate-jcache"
     implementation "com.github.ben-manes.caffeine:caffeine:${caffeineVersion}"
-    annotationProcessor "org.hibernate:hibernate-jpamodelgen:${hibernateVersion}"
-    implementation "org.hibernate:hibernate-core"
+    annotationProcessor "org.hibernate.orm:hibernate-jpamodelgen:${hibernateVersion}"
+    implementation "org.hibernate.orm:hibernate-core"
     implementation "org.hibernate.validator:hibernate-validator"
     implementation "org.liquibase:liquibase-core"
     liquibaseRuntime "org.liquibase:liquibase-core"
@@ -270,7 +278,7 @@ task webapp_test(type: NpmTask, dependsOn: "npm_install") {
 if (project.hasProperty("nodeInstall")) {
     node {
         version = "16.17.0"
-        npmVersion = "8.19.1"
+        npmVersion = "8.19.2"
         download = true
     }
 
