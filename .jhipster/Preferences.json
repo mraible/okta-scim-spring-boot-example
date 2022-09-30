@@ -1,0 +1,37 @@
+{
+  "applications": ["HealthPoints"],
+  "changelogDate": "20220930140422",
+  "dto": "no",
+  "embedded": false,
+  "entityTableName": "preferences",
+  "fields": [
+    {
+      "fieldName": "weeklyGoal",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required", "min", "max"],
+      "fieldValidateRulesMax": "21",
+      "fieldValidateRulesMin": "10"
+    },
+    {
+      "fieldName": "weightUnits",
+      "fieldType": "Units",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "KG,LB"
+    }
+  ],
+  "fluentMethods": true,
+  "jpaMetamodelFiltering": false,
+  "name": "Preferences",
+  "pagination": "no",
+  "readOnly": false,
+  "relationships": [
+    {
+      "otherEntityField": "login",
+      "otherEntityName": "user",
+      "ownerSide": true,
+      "relationshipName": "user",
+      "relationshipType": "one-to-one"
+    }
+  ],
+  "service": "no"
+}

@@ -1,0 +1,46 @@
+{
+  "applications": ["HealthPoints"],
+  "changelogDate": "20220930140122",
+  "dto": "no",
+  "embedded": false,
+  "entityTableName": "points",
+  "fields": [
+    {
+      "fieldName": "date",
+      "fieldType": "LocalDate",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "exercise",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "meals",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "alcohol",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "notes",
+      "fieldType": "String",
+      "fieldValidateRules": ["maxlength"],
+      "fieldValidateRulesMaxlength": "140"
+    }
+  ],
+  "fluentMethods": true,
+  "jpaMetamodelFiltering": false,
+  "name": "Points",
+  "pagination": "pagination",
+  "readOnly": false,
+  "relationships": [
+    {
+      "otherEntityField": "login",
+      "otherEntityName": "user",
+      "relationshipName": "user",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "service": "no"
+}

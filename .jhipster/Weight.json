@@ -1,0 +1,33 @@
+{
+  "applications": ["HealthPoints"],
+  "changelogDate": "20220930140322",
+  "dto": "no",
+  "embedded": false,
+  "entityTableName": "weight",
+  "fields": [
+    {
+      "fieldName": "timestamp",
+      "fieldType": "ZonedDateTime",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "weight",
+      "fieldType": "Double",
+      "fieldValidateRules": ["required"]
+    }
+  ],
+  "fluentMethods": true,
+  "jpaMetamodelFiltering": false,
+  "name": "Weight",
+  "pagination": "infinite-scroll",
+  "readOnly": false,
+  "relationships": [
+    {
+      "otherEntityField": "login",
+      "otherEntityName": "user",
+      "relationshipName": "user",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "service": "no"
+}
