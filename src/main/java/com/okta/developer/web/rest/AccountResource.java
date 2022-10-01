@@ -1,12 +1,13 @@
 package com.okta.developer.web.rest;
 
+import com.okta.developer.domain.User;
 import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.AdminUserDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,8 +46,9 @@ public class AccountResource {
     @GetMapping("/account")
     @SuppressWarnings("unchecked")
     public AdminUserDTO getAccount(Principal principal) {
-        if (principal instanceof AbstractAuthenticationToken) {
-            return userService.getUserFromAuthentication((AbstractAuthenticationToken) principal);
+        Optional<User> user = userService.getUserWithAuthoritiesByLogin(principal.getName());
+        if (user.isPresent()) {
+            return new AdminUserDTO(user.get());
         } else {
             throw new AccountResourceException("User could not be found");
         }

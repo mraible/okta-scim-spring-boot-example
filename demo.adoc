@@ -50,6 +50,22 @@ npm run e2e
 
 . Add Apache SCIMple dependencies
 +
+[source,groovy]
+.build.gradle
+----
+
+implementation "org.apache.directory.scim:scim-server:${scimpleVersion}"
+implementation "org.apache.directory.scim:scim-spring-boot-starter:${scimpleVersion}"
+----
++
+[source,groovy]
+.settings.gradle
+----
+scimpleVersion=1.0.0-SNAPSHOT
+----
++
+If you're using Maven:
++
 [source,xml]
 ----
 <scimple.version>1.0.0-SNAPSHOT</scimple.version>
@@ -66,12 +82,10 @@ npm run e2e
 </dependency>
 ----
 
-. Implement a `Repository<User>` bean: [`scim-service`]
+. Create a `ScimUserService` class that implements `Repository<User>`: [`scim-service`]
 +
 [source,java]
 ----
-package com.jhipster.demo.blog.security.oauth2;
-
 import jakarta.annotation.PostConstruct;
 import jakarta.ws.rs.core.Response;
 import org.apache.directory.scim.core.repository.Repository;
@@ -218,3 +232,13 @@ public class ScimUserService implements Repository<ScimUser> {
     }
 }
 ----
+
+. Turn down logging from Jersey and JAXB:
+
+[source,xml]
+.src/main/resources/logback-spring.xml
+----
+<logger name="org.glassfish" level="WARN"/>
+----
+
+// todo: protect the SCIM endpoints with Spring Security

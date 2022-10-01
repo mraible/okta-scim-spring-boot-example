@@ -242,6 +242,8 @@ dependencies {
     implementation "org.springframework.security:spring-security-data"
     implementation "io.micrometer:micrometer-registry-prometheus"
     implementation "io.dropwizard.metrics:metrics-core"
+    implementation "org.apache.directory.scim:scim-server:${scimpleVersion}"
+    implementation "org.apache.directory.scim:scim-spring-boot-starter:${scimpleVersion}"
     liquibaseRuntime sourceSets.main.compileClasspath
     liquibaseRuntime "org.liquibase.ext:liquibase-hibernate5:${liquibaseHibernate5Version}"
     //jhipster-needle-gradle-dependency - JHipster will add additional dependencies here
