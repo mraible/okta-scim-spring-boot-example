@@ -16,7 +16,7 @@ toc::[]
 
 == Configure Okta for SCIM
 
-. https://twitter.com/jf[Joël] is awesome! https://developer.okta.com/blog/2021/09/01/flask-scim-server#option-1-scim-template-app[Create a SCIM Template App]
+. https://twitter.com/jf[Joël] is awesome! Start with his https://developer.okta.com/blog/2021/09/01/flask-scim-server#option-1-scim-template-app[create a SCIM Template App]. 
 
 == Create a Spring Boot app with JHipster
 
@@ -24,9 +24,10 @@ toc::[]
 +
 [source,shell]
 ----
+git clone -b spring-boot-3.0-m4 git@github.com:jhipster/jhipster-bom.git
+cd jhipster-bom && ./mvnw install -Dgpg.skip=true && cd ..
 git clone -b spring-boot-3.0-m4 https://github.com/jhipster/generator-jhipster.git
-cd generator-jhipster
-npm link
+cd generator-jhipster && npm link
 ----
 
 . Create a new directory for your project and `cd` into it:
