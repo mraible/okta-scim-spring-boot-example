@@ -1,7 +1,5 @@
 package com.okta.developer.web.rest;
 
-import static org.elasticsearch.index.query.QueryBuilders.*;
-
 import com.okta.developer.repository.search.UserSearchRepository;
 import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.UserDTO;

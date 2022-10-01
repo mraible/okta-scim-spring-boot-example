@@ -1,7 +1,5 @@
 package com.okta.developer.web.rest;
 
-import static org.elasticsearch.index.query.QueryBuilders.*;
-
 import com.okta.developer.domain.BloodPressure;
 import com.okta.developer.repository.BloodPressureRepository;
 import com.okta.developer.repository.search.BloodPressureSearchRepository;
@@ -13,15 +11,12 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;

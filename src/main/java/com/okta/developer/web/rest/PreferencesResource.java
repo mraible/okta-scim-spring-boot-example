@@ -1,7 +1,5 @@
 package com.okta.developer.web.rest;
 
-import static org.elasticsearch.index.query.QueryBuilders.*;
-
 import com.okta.developer.domain.Preferences;
 import com.okta.developer.repository.PreferencesRepository;
 import com.okta.developer.repository.search.PreferencesSearchRepository;
