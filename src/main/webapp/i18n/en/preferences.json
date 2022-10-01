@@ -6,7 +6,6 @@
         "refreshListLabel": "Refresh list",
         "createLabel": "Create a new Preferences",
         "createOrEditLabel": "Create or edit a Preferences",
-        "search": "Search for Preferences",
         "notFound": "No Preferences found"
       },
       "created": "A new Preferences is created with identifier {{ param }}",

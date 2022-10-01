@@ -5,7 +5,6 @@ import com.okta.developer.domain.Authority;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.AuthorityRepository;
 import com.okta.developer.repository.UserRepository;
-import com.okta.developer.repository.search.UserSearchRepository;
 import com.okta.developer.security.SecurityUtils;
 import com.okta.developer.service.dto.AdminUserDTO;
 import com.okta.developer.service.dto.UserDTO;
@@ -35,20 +34,12 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    private final UserSearchRepository userSearchRepository;
-
     private final AuthorityRepository authorityRepository;
 
     private final CacheManager cacheManager;
 
-    public UserService(
-        UserRepository userRepository,
-        UserSearchRepository userSearchRepository,
-        AuthorityRepository authorityRepository,
-        CacheManager cacheManager
-    ) {
+    public UserService(UserRepository userRepository, AuthorityRepository authorityRepository, CacheManager cacheManager) {
         this.userRepository = userRepository;
-        this.userSearchRepository = userSearchRepository;
         this.authorityRepository = authorityRepository;
         this.cacheManager = cacheManager;
     }
@@ -74,7 +65,6 @@ public class UserService {
                 }
                 user.setLangKey(langKey);
                 user.setImageUrl(imageUrl);
-                userSearchRepository.save(user);
                 this.clearUserCaches(user);
                 log.debug("Changed Information for User: {}", user);
             });

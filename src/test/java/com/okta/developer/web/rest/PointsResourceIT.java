@@ -1,7 +1,6 @@
 package com.okta.developer.web.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -11,19 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.okta.developer.IntegrationTest;
 import com.okta.developer.domain.Points;
 import com.okta.developer.repository.PointsRepository;
-import com.okta.developer.repository.search.PointsSearchRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.collections4.IterableUtils;
-import org.assertj.core.util.IterableUtil;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,7 +58,6 @@ class PointsResourceIT {
 
     private static final String ENTITY_API_URL = "/api/points";
     private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
-    private static final String ENTITY_SEARCH_API_URL = "/api/_search/points";
 
     private static Random random = new Random();
     private static AtomicLong count = new AtomicLong(random.nextInt() + (2 * Integer.MAX_VALUE));
@@ -75,9 +67,6 @@ class PointsResourceIT {
 
     @Mock
     private PointsRepository pointsRepositoryMock;
-
-    @Autowired
-    private PointsSearchRepository pointsSearchRepository;
 
     @Autowired
     private EntityManager em;
@@ -119,12 +108,6 @@ class PointsResourceIT {
         return points;
     }
 
-    @AfterEach
-    public void cleanupElasticSearchRepository() {
-        pointsSearchRepository.deleteAll();
-        assertThat(pointsSearchRepository.count()).isEqualTo(0);
-    }
-
     @BeforeEach
     public void initTest() {
         points = createEntity(em);
@@ -134,7 +117,6 @@ class PointsResourceIT {
     @Transactional
     void createPoints() throws Exception {
         int databaseSizeBeforeCreate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         // Create the Points
         restPointsMockMvc
             .perform(
@@ -145,12 +127,6 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeCreate + 1);
-        await()
-            .atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-                assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore + 1);
-            });
         Points testPoints = pointsList.get(pointsList.size() - 1);
         assertThat(testPoints.getDate()).isEqualTo(DEFAULT_DATE);
         assertThat(testPoints.getExercise()).isEqualTo(DEFAULT_EXERCISE);
@@ -166,7 +142,6 @@ class PointsResourceIT {
         points.setId(1L);
 
         int databaseSizeBeforeCreate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
 
         // An entity with an existing ID cannot be created, so this API call must fail
         restPointsMockMvc
@@ -178,15 +153,12 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeCreate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void checkDateIsRequired() throws Exception {
         int databaseSizeBeforeTest = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         // set the field null
         points.setDate(null);
 
@@ -200,8 +172,6 @@ class PointsResourceIT {
 
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeTest);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -273,8 +243,6 @@ class PointsResourceIT {
         pointsRepository.saveAndFlush(points);
 
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        pointsSearchRepository.save(points);
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
 
         // Update the points
         Points updatedPoints = pointsRepository.findById(points.getId()).get();
@@ -300,26 +268,12 @@ class PointsResourceIT {
         assertThat(testPoints.getMeals()).isEqualTo(UPDATED_MEALS);
         assertThat(testPoints.getAlcohol()).isEqualTo(UPDATED_ALCOHOL);
         assertThat(testPoints.getNotes()).isEqualTo(UPDATED_NOTES);
-        await()
-            .atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-                assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
-                List<Points> pointsSearchList = IterableUtils.toList(pointsSearchRepository.findAll());
-                Points testPointsSearch = pointsSearchList.get(searchDatabaseSizeAfter - 1);
-                assertThat(testPointsSearch.getDate()).isEqualTo(UPDATED_DATE);
-                assertThat(testPointsSearch.getExercise()).isEqualTo(UPDATED_EXERCISE);
-                assertThat(testPointsSearch.getMeals()).isEqualTo(UPDATED_MEALS);
-                assertThat(testPointsSearch.getAlcohol()).isEqualTo(UPDATED_ALCOHOL);
-                assertThat(testPointsSearch.getNotes()).isEqualTo(UPDATED_NOTES);
-            });
     }
 
     @Test
     @Transactional
     void putNonExistingPoints() throws Exception {
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         points.setId(count.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
@@ -335,15 +289,12 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void putWithIdMismatchPoints() throws Exception {
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         points.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -359,15 +310,12 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void putWithMissingIdPathParamPoints() throws Exception {
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         points.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -380,8 +328,6 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -461,7 +407,6 @@ class PointsResourceIT {
     @Transactional
     void patchNonExistingPoints() throws Exception {
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         points.setId(count.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
@@ -477,15 +422,12 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void patchWithIdMismatchPoints() throws Exception {
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         points.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -501,15 +443,12 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void patchWithMissingIdPathParamPoints() throws Exception {
         int databaseSizeBeforeUpdate = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
         points.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -525,8 +464,6 @@ class PointsResourceIT {
         // Validate the Points in the database
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -534,12 +471,8 @@ class PointsResourceIT {
     void deletePoints() throws Exception {
         // Initialize the database
         pointsRepository.saveAndFlush(points);
-        pointsRepository.save(points);
-        pointsSearchRepository.save(points);
 
         int databaseSizeBeforeDelete = pointsRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeBefore).isEqualTo(databaseSizeBeforeDelete);
 
         // Delete the points
         restPointsMockMvc
@@ -549,27 +482,5 @@ class PointsResourceIT {
         // Validate the database contains one less item
         List<Points> pointsList = pointsRepository.findAll();
         assertThat(pointsList).hasSize(databaseSizeBeforeDelete - 1);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(pointsSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore - 1);
-    }
-
-    @Test
-    @Transactional
-    void searchPoints() throws Exception {
-        // Initialize the database
-        points = pointsRepository.saveAndFlush(points);
-        pointsSearchRepository.save(points);
-
-        // Search the points
-        restPointsMockMvc
-            .perform(get(ENTITY_SEARCH_API_URL + "?query=id:" + points.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(points.getId().intValue())))
-            .andExpect(jsonPath("$.[*].date").value(hasItem(DEFAULT_DATE.toString())))
-            .andExpect(jsonPath("$.[*].exercise").value(hasItem(DEFAULT_EXERCISE)))
-            .andExpect(jsonPath("$.[*].meals").value(hasItem(DEFAULT_MEALS)))
-            .andExpect(jsonPath("$.[*].alcohol").value(hasItem(DEFAULT_ALCOHOL)))
-            .andExpect(jsonPath("$.[*].notes").value(hasItem(DEFAULT_NOTES)));
     }
 }

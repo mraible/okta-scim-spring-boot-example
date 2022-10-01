@@ -2,7 +2,6 @@ package com.okta.developer.web.rest;
 
 import com.okta.developer.domain.Weight;
 import com.okta.developer.repository.WeightRepository;
-import com.okta.developer.repository.search.WeightSearchRepository;
 import com.okta.developer.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -42,11 +42,8 @@ public class WeightResource {
 
     private final WeightRepository weightRepository;
 
-    private final WeightSearchRepository weightSearchRepository;
-
-    public WeightResource(WeightRepository weightRepository, WeightSearchRepository weightSearchRepository) {
+    public WeightResource(WeightRepository weightRepository) {
         this.weightRepository = weightRepository;
-        this.weightSearchRepository = weightSearchRepository;
     }
 
     /**
@@ -63,7 +60,6 @@ public class WeightResource {
             throw new BadRequestAlertException("A new weight cannot already have an ID", ENTITY_NAME, "idexists");
         }
         Weight result = weightRepository.save(weight);
-        weightSearchRepository.index(result);
         return ResponseEntity
             .created(new URI("/api/weights/" + result.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
@@ -98,7 +94,6 @@ public class WeightResource {
         }
 
         Weight result = weightRepository.save(weight);
-        weightSearchRepository.index(result);
         return ResponseEntity
             .ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, weight.getId().toString()))
@@ -145,12 +140,7 @@ public class WeightResource {
 
                 return existingWeight;
             })
-            .map(weightRepository::save)
-            .map(savedWeight -> {
-                weightSearchRepository.save(savedWeight);
-
-                return savedWeight;
-            });
+            .map(weightRepository::save);
 
         return ResponseUtil.wrapOrNotFound(
             result,
@@ -204,29 +194,9 @@ public class WeightResource {
     public ResponseEntity<Void> deleteWeight(@PathVariable Long id) {
         log.debug("REST request to delete Weight : {}", id);
         weightRepository.deleteById(id);
-        weightSearchRepository.deleteById(id);
         return ResponseEntity
             .noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
-    }
-
-    /**
-     * {@code SEARCH  /_search/weights?query=:query} : search for the weight corresponding
-     * to the query.
-     *
-     * @param query the query of the weight search.
-     * @param pageable the pagination information.
-     * @return the result of the search.
-     */
-    @GetMapping("/_search/weights")
-    public ResponseEntity<List<Weight>> searchWeights(
-        @RequestParam String query,
-        @org.springdoc.api.annotations.ParameterObject Pageable pageable
-    ) {
-        log.debug("REST request to search for a page of Weights for query {}", query);
-        Page<Weight> page = weightSearchRepository.search(query, pageable);
-        HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 }

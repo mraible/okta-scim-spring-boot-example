@@ -2,7 +2,6 @@ package com.okta.developer.web.rest;
 
 import com.okta.developer.domain.BloodPressure;
 import com.okta.developer.repository.BloodPressureRepository;
-import com.okta.developer.repository.search.BloodPressureSearchRepository;
 import com.okta.developer.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -42,14 +42,8 @@ public class BloodPressureResource {
 
     private final BloodPressureRepository bloodPressureRepository;
 
-    private final BloodPressureSearchRepository bloodPressureSearchRepository;
-
-    public BloodPressureResource(
-        BloodPressureRepository bloodPressureRepository,
-        BloodPressureSearchRepository bloodPressureSearchRepository
-    ) {
+    public BloodPressureResource(BloodPressureRepository bloodPressureRepository) {
         this.bloodPressureRepository = bloodPressureRepository;
-        this.bloodPressureSearchRepository = bloodPressureSearchRepository;
     }
 
     /**
@@ -66,7 +60,6 @@ public class BloodPressureResource {
             throw new BadRequestAlertException("A new bloodPressure cannot already have an ID", ENTITY_NAME, "idexists");
         }
         BloodPressure result = bloodPressureRepository.save(bloodPressure);
-        bloodPressureSearchRepository.index(result);
         return ResponseEntity
             .created(new URI("/api/blood-pressures/" + result.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
@@ -101,7 +94,6 @@ public class BloodPressureResource {
         }
 
         BloodPressure result = bloodPressureRepository.save(bloodPressure);
-        bloodPressureSearchRepository.index(result);
         return ResponseEntity
             .ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, bloodPressure.getId().toString()))
@@ -151,12 +143,7 @@ public class BloodPressureResource {
 
                 return existingBloodPressure;
             })
-            .map(bloodPressureRepository::save)
-            .map(savedBloodPressure -> {
-                bloodPressureSearchRepository.save(savedBloodPressure);
-
-                return savedBloodPressure;
-            });
+            .map(bloodPressureRepository::save);
 
         return ResponseUtil.wrapOrNotFound(
             result,
@@ -210,29 +197,9 @@ public class BloodPressureResource {
     public ResponseEntity<Void> deleteBloodPressure(@PathVariable Long id) {
         log.debug("REST request to delete BloodPressure : {}", id);
         bloodPressureRepository.deleteById(id);
-        bloodPressureSearchRepository.deleteById(id);
         return ResponseEntity
             .noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
-    }
-
-    /**
-     * {@code SEARCH  /_search/blood-pressures?query=:query} : search for the bloodPressure corresponding
-     * to the query.
-     *
-     * @param query the query of the bloodPressure search.
-     * @param pageable the pagination information.
-     * @return the result of the search.
-     */
-    @GetMapping("/_search/blood-pressures")
-    public ResponseEntity<List<BloodPressure>> searchBloodPressures(
-        @RequestParam String query,
-        @org.springdoc.api.annotations.ParameterObject Pageable pageable
-    ) {
-        log.debug("REST request to search for a page of BloodPressures for query {}", query);
-        Page<BloodPressure> page = bloodPressureSearchRepository.search(query, pageable);
-        HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 }

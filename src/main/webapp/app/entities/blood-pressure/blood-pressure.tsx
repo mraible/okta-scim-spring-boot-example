@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Input, InputGroup, FormGroup, Form, Row, Col, Table } from 'reactstrap';
-import { Translate, translate, TextFormat, getSortState } from 'react-jhipster';
+import { Button, Table } from 'reactstrap';
+import { Translate, TextFormat, getSortState } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { APP_DATE_FORMAT, APP_LOCAL_DATE_FORMAT } from 'app/config/constants';
@@ -11,7 +11,7 @@ import { overridePaginationStateWithQueryParams } from 'app/shared/util/entity-u
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { IBloodPressure } from 'app/shared/model/blood-pressure.model';
-import { searchEntities, getEntities, reset } from './blood-pressure.reducer';
+import { getEntities, reset } from './blood-pressure.reducer';
 
 export const BloodPressure = () => {
   const dispatch = useAppDispatch();
@@ -19,7 +19,6 @@ export const BloodPressure = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [search, setSearch] = useState('');
   const [paginationState, setPaginationState] = useState(
     overridePaginationStateWithQueryParams(getSortState(location, ITEMS_PER_PAGE, 'id'), location.search)
   );
@@ -33,24 +32,13 @@ export const BloodPressure = () => {
   const updateSuccess = useAppSelector(state => state.bloodPressure.updateSuccess);
 
   const getAllEntities = () => {
-    if (search) {
-      dispatch(
-        searchEntities({
-          query: search,
-          page: paginationState.activePage - 1,
-          size: paginationState.itemsPerPage,
-          sort: `${paginationState.sort},${paginationState.order}`,
-        })
-      );
-    } else {
-      dispatch(
-        getEntities({
-          page: paginationState.activePage - 1,
-          size: paginationState.itemsPerPage,
-          sort: `${paginationState.sort},${paginationState.order}`,
-        })
-      );
-    }
+    dispatch(
+      getEntities({
+        page: paginationState.activePage - 1,
+        size: paginationState.itemsPerPage,
+        sort: `${paginationState.sort},${paginationState.order}`,
+      })
+    );
   };
 
   const resetAll = () => {
@@ -65,37 +53,6 @@ export const BloodPressure = () => {
   useEffect(() => {
     resetAll();
   }, []);
-
-  const startSearching = e => {
-    if (search) {
-      dispatch(reset());
-      setPaginationState({
-        ...paginationState,
-        activePage: 1,
-      });
-      dispatch(
-        searchEntities({
-          query: search,
-          page: paginationState.activePage - 1,
-          size: paginationState.itemsPerPage,
-          sort: `${paginationState.sort},${paginationState.order}`,
-        })
-      );
-    }
-    e.preventDefault();
-  };
-
-  const clear = () => {
-    dispatch(reset());
-    setSearch('');
-    setPaginationState({
-      ...paginationState,
-      activePage: 1,
-    });
-    dispatch(getEntities({}));
-  };
-
-  const handleSearch = event => setSearch(event.target.value);
 
   useEffect(() => {
     if (updateSuccess) {
@@ -121,7 +78,7 @@ export const BloodPressure = () => {
       getAllEntities();
       setSorting(false);
     }
-  }, [sorting, search]);
+  }, [sorting]);
 
   const sort = p => () => {
     dispatch(reset());
@@ -154,29 +111,6 @@ export const BloodPressure = () => {
           </Link>
         </div>
       </h2>
-      <Row>
-        <Col sm="12">
-          <Form onSubmit={startSearching}>
-            <FormGroup>
-              <InputGroup>
-                <Input
-                  type="text"
-                  name="search"
-                  defaultValue={search}
-                  onChange={handleSearch}
-                  placeholder={translate('healthPointsApp.bloodPressure.home.search')}
-                />
-                <Button className="input-group-addon">
-                  <FontAwesomeIcon icon="search" />
-                </Button>
-                <Button type="reset" className="input-group-addon" onClick={clear}>
-                  <FontAwesomeIcon icon="trash" />
-                </Button>
-              </InputGroup>
-            </FormGroup>
-          </Form>
-        </Col>
-      </Row>
       <div className="table-responsive">
         <InfiniteScroll
           dataLength={bloodPressureList ? bloodPressureList.length : 0}

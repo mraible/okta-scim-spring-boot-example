@@ -2,7 +2,6 @@ package com.okta.developer.web.rest;
 
 import static com.okta.developer.web.rest.TestUtil.sameInstant;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -12,21 +11,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.okta.developer.IntegrationTest;
 import com.okta.developer.domain.BloodPressure;
 import com.okta.developer.repository.BloodPressureRepository;
-import com.okta.developer.repository.search.BloodPressureSearchRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.collections4.IterableUtils;
-import org.assertj.core.util.IterableUtil;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,7 +55,6 @@ class BloodPressureResourceIT {
 
     private static final String ENTITY_API_URL = "/api/blood-pressures";
     private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
-    private static final String ENTITY_SEARCH_API_URL = "/api/_search/blood-pressures";
 
     private static Random random = new Random();
     private static AtomicLong count = new AtomicLong(random.nextInt() + (2 * Integer.MAX_VALUE));
@@ -72,9 +64,6 @@ class BloodPressureResourceIT {
 
     @Mock
     private BloodPressureRepository bloodPressureRepositoryMock;
-
-    @Autowired
-    private BloodPressureSearchRepository bloodPressureSearchRepository;
 
     @Autowired
     private EntityManager em;
@@ -112,12 +101,6 @@ class BloodPressureResourceIT {
         return bloodPressure;
     }
 
-    @AfterEach
-    public void cleanupElasticSearchRepository() {
-        bloodPressureSearchRepository.deleteAll();
-        assertThat(bloodPressureSearchRepository.count()).isEqualTo(0);
-    }
-
     @BeforeEach
     public void initTest() {
         bloodPressure = createEntity(em);
@@ -127,7 +110,6 @@ class BloodPressureResourceIT {
     @Transactional
     void createBloodPressure() throws Exception {
         int databaseSizeBeforeCreate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         // Create the BloodPressure
         restBloodPressureMockMvc
             .perform(
@@ -141,12 +123,6 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeCreate + 1);
-        await()
-            .atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-                assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore + 1);
-            });
         BloodPressure testBloodPressure = bloodPressureList.get(bloodPressureList.size() - 1);
         assertThat(testBloodPressure.getTimestamp()).isEqualTo(DEFAULT_TIMESTAMP);
         assertThat(testBloodPressure.getSystolic()).isEqualTo(DEFAULT_SYSTOLIC);
@@ -160,7 +136,6 @@ class BloodPressureResourceIT {
         bloodPressure.setId(1L);
 
         int databaseSizeBeforeCreate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
 
         // An entity with an existing ID cannot be created, so this API call must fail
         restBloodPressureMockMvc
@@ -175,15 +150,12 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeCreate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void checkTimestampIsRequired() throws Exception {
         int databaseSizeBeforeTest = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         // set the field null
         bloodPressure.setTimestamp(null);
 
@@ -200,15 +172,12 @@ class BloodPressureResourceIT {
 
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeTest);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void checkSystolicIsRequired() throws Exception {
         int databaseSizeBeforeTest = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         // set the field null
         bloodPressure.setSystolic(null);
 
@@ -225,15 +194,12 @@ class BloodPressureResourceIT {
 
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeTest);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void checkDiastolicIsRequired() throws Exception {
         int databaseSizeBeforeTest = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         // set the field null
         bloodPressure.setDiastolic(null);
 
@@ -250,8 +216,6 @@ class BloodPressureResourceIT {
 
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeTest);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -319,8 +283,6 @@ class BloodPressureResourceIT {
         bloodPressureRepository.saveAndFlush(bloodPressure);
 
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        bloodPressureSearchRepository.save(bloodPressure);
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
 
         // Update the bloodPressure
         BloodPressure updatedBloodPressure = bloodPressureRepository.findById(bloodPressure.getId()).get();
@@ -344,24 +306,12 @@ class BloodPressureResourceIT {
         assertThat(testBloodPressure.getTimestamp()).isEqualTo(UPDATED_TIMESTAMP);
         assertThat(testBloodPressure.getSystolic()).isEqualTo(UPDATED_SYSTOLIC);
         assertThat(testBloodPressure.getDiastolic()).isEqualTo(UPDATED_DIASTOLIC);
-        await()
-            .atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-                assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
-                List<BloodPressure> bloodPressureSearchList = IterableUtils.toList(bloodPressureSearchRepository.findAll());
-                BloodPressure testBloodPressureSearch = bloodPressureSearchList.get(searchDatabaseSizeAfter - 1);
-                assertThat(testBloodPressureSearch.getTimestamp()).isEqualTo(UPDATED_TIMESTAMP);
-                assertThat(testBloodPressureSearch.getSystolic()).isEqualTo(UPDATED_SYSTOLIC);
-                assertThat(testBloodPressureSearch.getDiastolic()).isEqualTo(UPDATED_DIASTOLIC);
-            });
     }
 
     @Test
     @Transactional
     void putNonExistingBloodPressure() throws Exception {
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         bloodPressure.setId(count.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
@@ -377,15 +327,12 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void putWithIdMismatchBloodPressure() throws Exception {
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         bloodPressure.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -401,15 +348,12 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void putWithMissingIdPathParamBloodPressure() throws Exception {
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         bloodPressure.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -425,8 +369,6 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -497,7 +439,6 @@ class BloodPressureResourceIT {
     @Transactional
     void patchNonExistingBloodPressure() throws Exception {
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         bloodPressure.setId(count.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
@@ -513,15 +454,12 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void patchWithIdMismatchBloodPressure() throws Exception {
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         bloodPressure.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -537,15 +475,12 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void patchWithMissingIdPathParamBloodPressure() throws Exception {
         int databaseSizeBeforeUpdate = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
         bloodPressure.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -561,8 +496,6 @@ class BloodPressureResourceIT {
         // Validate the BloodPressure in the database
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -570,12 +503,8 @@ class BloodPressureResourceIT {
     void deleteBloodPressure() throws Exception {
         // Initialize the database
         bloodPressureRepository.saveAndFlush(bloodPressure);
-        bloodPressureRepository.save(bloodPressure);
-        bloodPressureSearchRepository.save(bloodPressure);
 
         int databaseSizeBeforeDelete = bloodPressureRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeBefore).isEqualTo(databaseSizeBeforeDelete);
 
         // Delete the bloodPressure
         restBloodPressureMockMvc
@@ -585,25 +514,5 @@ class BloodPressureResourceIT {
         // Validate the database contains one less item
         List<BloodPressure> bloodPressureList = bloodPressureRepository.findAll();
         assertThat(bloodPressureList).hasSize(databaseSizeBeforeDelete - 1);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(bloodPressureSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore - 1);
-    }
-
-    @Test
-    @Transactional
-    void searchBloodPressure() throws Exception {
-        // Initialize the database
-        bloodPressure = bloodPressureRepository.saveAndFlush(bloodPressure);
-        bloodPressureSearchRepository.save(bloodPressure);
-
-        // Search the bloodPressure
-        restBloodPressureMockMvc
-            .perform(get(ENTITY_SEARCH_API_URL + "?query=id:" + bloodPressure.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(bloodPressure.getId().intValue())))
-            .andExpect(jsonPath("$.[*].timestamp").value(hasItem(sameInstant(DEFAULT_TIMESTAMP))))
-            .andExpect(jsonPath("$.[*].systolic").value(hasItem(DEFAULT_SYSTOLIC)))
-            .andExpect(jsonPath("$.[*].diastolic").value(hasItem(DEFAULT_DIASTOLIC)));
     }
 }
