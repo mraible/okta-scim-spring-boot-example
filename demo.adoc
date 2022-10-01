@@ -14,6 +14,10 @@ Today, I'll show you how to build a JHipster app that's uses OAuth and OIDC for 
 
 toc::[]
 
+== Configure Okta for SCIM
+
+. https://twitter.com/jf[Joël] is awesome! https://developer.okta.com/blog/2021/09/01/flask-scim-server#option-1-scim-template-app[Create a SCIM Template App]
+
 == Create a Spring Boot app with JHipster
 
 . Install JHipster nightly:
@@ -25,7 +29,7 @@ cd generator-jhipster
 npm link
 ----
 
-. Run the following command to create a new directory for your project:
+. Create a new directory for your project and `cd` into it:
 +
 [source,shell]
 ----
@@ -82,7 +86,7 @@ If you're using Maven:
 </dependency>
 ----
 
-. Create a `ScimUserService` class that implements `Repository<User>`: [`scim-service`]
+. Create a `ScimUserService` class that implements `Repository<User>`: [`scim-userservice`]
 +
 [source,java]
 ----
@@ -232,6 +236,9 @@ public class ScimUserService implements Repository<ScimUser> {
     }
 }
 ----
+
+. Create a `ScimGroupService` class that implements `Repository<Group>`: [`scim-groupservice`]
+
 
 . Turn down logging from Jersey and JAXB:
 
