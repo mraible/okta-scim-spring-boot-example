@@ -14,10 +14,6 @@ Today, I'll show you how to build a JHipster app that's uses OAuth and OIDC for 
 
 toc::[]
 
-== Configure Okta for SCIM
-
-. https://twitter.com/jf[Joël] is awesome! Start with his https://developer.okta.com/blog/2021/09/01/flask-scim-server#option-1-scim-template-app[create a SCIM Template App]. 
-
 == Create a Spring Boot app with JHipster
 
 . Install JHipster nightly:
@@ -53,7 +49,7 @@ jhipster jdl 21-points.jh
 npm run e2e
 ----
 
-. Add Apache SCIMple dependencies
+. Add Apache SCIMple dependencies:
 +
 [source,groovy]
 .build.gradle
@@ -87,166 +83,117 @@ If you're using Maven:
 </dependency>
 ----
 
-. Create a `ScimUserService` class that implements `Repository<User>`: [`scim-userservice`]
+. Create a `ScimUserService` class that implements `Repository<User>`: [`scim-user`]
 +
 [source,java]
 ----
-import jakarta.annotation.PostConstruct;
-import jakarta.ws.rs.core.Response;
-import org.apache.directory.scim.core.repository.Repository;
-import org.apache.directory.scim.core.repository.UpdateRequest;
-import org.apache.directory.scim.core.schema.SchemaRegistry;
-import org.apache.directory.scim.server.exception.UnableToCreateResourceException;
-import org.apache.directory.scim.server.exception.UnableToUpdateResourceException;
-import org.apache.directory.scim.spec.filter.Filter;
-import org.apache.directory.scim.spec.filter.FilterExpressions;
-import org.apache.directory.scim.spec.filter.FilterResponse;
-import org.apache.directory.scim.spec.filter.PageRequest;
-import org.apache.directory.scim.spec.filter.SortRequest;
-import org.apache.directory.scim.spec.resources.Email;
-import org.apache.directory.scim.spec.resources.Name;
-import org.apache.directory.scim.spec.resources.ScimResource;
-import org.apache.directory.scim.spec.resources.ScimUser;
-import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-/**
- * Creates a singleton (effectively) Provider<User> with a memory-based
- * persistence layer.
- *
- * @author Chris Harm &lt;crh5255@psu.edu&gt;
- */
-@Service
-public class ScimUserService implements Repository<ScimUser> {
-
-    static final String DEFAULT_USER_ID = "1";
-    static final String DEFAULT_USER_EXTERNAL_ID = "e" + DEFAULT_USER_ID;
-    static final String DEFAULT_USER_DISPLAY_NAME = "User " + DEFAULT_USER_ID;
-    static final String DEFAULT_USER_EMAIL_VALUE = "e1@example.com";
-    static final String DEFAULT_USER_EMAIL_TYPE = "work";
-
-    private final Map<String, ScimUser> users = new HashMap<>();
-
-    private final SchemaRegistry schemaRegistry;
-
-    public ScimUserService(SchemaRegistry schemaRegistry) {
-        this.schemaRegistry = schemaRegistry;
-    }
-
-    @PostConstruct
-    public void init() {
-        ScimUser user = new ScimUser();
-        user.setId(DEFAULT_USER_ID);
-        user.setExternalId(DEFAULT_USER_EXTERNAL_ID);
-        user.setUserName(DEFAULT_USER_EXTERNAL_ID);
-        user.setDisplayName(DEFAULT_USER_DISPLAY_NAME);
-        user.setName(new Name()
-            .setGivenName("Tester")
-            .setFamilyName("McTest"));
-        Email email = new Email();
-        email.setDisplay(DEFAULT_USER_EMAIL_VALUE);
-        email.setValue(DEFAULT_USER_EMAIL_VALUE);
-        email.setType(DEFAULT_USER_EMAIL_TYPE);
-        email.setPrimary(true);
-        user.setEmails(List.of(email));
-
-        users.put(user.getId(), user);
-    }
-
-    @Override
-    public Class<ScimUser> getResourceClass() {
-        return ScimUser.class;
-    }
-
-    /**
-     * @see Repository#create(ScimResource)
-     */
-    @Override
-    public ScimUser create(ScimUser resource) throws UnableToCreateResourceException {
-        String resourceId = resource.getId();
-        int idCandidate = resource.hashCode();
-        String id = resourceId != null ? resourceId : Integer.toString(idCandidate);
-
-        while (users.containsKey(id)) {
-            id = Integer.toString(idCandidate);
-            ++idCandidate;
-        }
-
-        // check to make sure the user doesn't already exist
-        boolean existingUserFound = users.values().stream()
-            .anyMatch(user -> user.getUserName().equals(resource.getUserName()));
-        if (existingUserFound) {
-            // HTTP leaking into data layer
-            throw new UnableToCreateResourceException(Response.Status.CONFLICT, "User '" + resource.getUserName() + "' already exists.");
-        }
-
-        resource.setId(id);
-        users.put(id, resource);
-        return resource;
-    }
-
-    /**
-     * @see Repository#update(UpdateRequest)
-     */
-    @Override
-    public ScimUser update(UpdateRequest<ScimUser> updateRequest) throws UnableToUpdateResourceException {
-        String id = updateRequest.getId();
-        ScimUser resource = updateRequest.getResource();
-        users.put(id, resource);
-        return resource;
-    }
-
-    /**
-     * @see Repository#get(java.lang.String)
-     */
-    @Override
-    public ScimUser get(String id) {
-        return users.get(id);
-    }
-
-    /**
-     * @see Repository#delete(java.lang.String)
-     */
-    @Override
-    public void delete(String id) {
-        users.remove(id);
-    }
-
-    /**
-     * @see Repository#find(Filter, PageRequest, SortRequest)
-     */
-    @Override
-    public FilterResponse<ScimUser> find(Filter filter, PageRequest pageRequest, SortRequest sortRequest) {
-
-        long count = pageRequest.getCount() != null ? pageRequest.getCount() : users.size();
-        long startIndex = pageRequest.getStartIndex() != null
-            ? pageRequest.getStartIndex() - 1 // SCIM is 1-based indexed
-            : 0;
-
-        List<ScimUser> result = users.values().stream()
-            .skip(startIndex)
-            .limit(count)
-            .filter(FilterExpressions.inMemory(filter, schemaRegistry.getSchema(ScimUser.SCHEMA_URI)))
-            .collect(Collectors.toList());
-
-        return new FilterResponse<>(result, pageRequest, result.size());
-    }
-}
+// todo: paste final code
 ----
 
-. Create a `ScimGroupService` class that implements `Repository<Group>`: [`scim-groupservice`]
-
+. Create a `ScimGroupService` class that implements `Repository<Group>`: [`scim-group`]
++
+[source,java]
+----
+// todo: paste final code
+----
 
 . Turn down logging from Jersey and JAXB:
-
++
 [source,xml]
 .src/main/resources/logback-spring.xml
 ----
 <logger name="org.glassfish" level="WARN"/>
 ----
 
-// todo: protect the SCIM endpoints with Spring Security
+. Configure Spring to serve up Jersey endpoint at `/scim`:
++
+[source,yaml]
+.src/main/resources/config/application.yml
+----
+jersey:
+    application-path: /scim
+----
+
+. Update `SecurityConfiguration` to skip CSRF for Jersey endpoints:
++
+[source,java]
+.src/main/java/com/okta/developer/config/SecurityConfiguration.java
+----
+http
+    .csrf()
+    .ignoringAntMatchers("/h2-console/**", "/scim/**")
+----
+
+. Enable CORS for `/scim/**`:
++
+[source,java]
+.src/main/java/com/okta/developer/config/WebConfigurer.java
+----
+source.registerCorsConfiguration("/scim/**", config);
+----
+
+. Update `AccountResource#getAccount()` to get user from database:
++
+[source,java]
+----
+@GetMapping("/account")
+public AdminUserDTO getAccount() {
+    Optional<String> email = SecurityUtils.getCurrentUserLogin();
+
+    if (email.isPresent()) {
+        Optional<User> user = userService.getUserWithAuthoritiesByLogin(email.get());
+        if (user.isPresent()) {
+            return new AdminUserDTO(user.get());
+        }
+    }
+
+    throw new AccountResourceException("User could not be found");
+}
+----
+
+. Start ngrok and copy the https URL:
++
+[source,shell]
+----
+ngrok http 8080
+----
+
+== Configure Okta for SCIM
+
+https://developer.okta.com/blog/2021/09/01/flask-scim-server#option-1-scim-template-app[Create a SCIM Template App] on Okta, or use the following steps:
+
+. Log in to Okta and go to **Applications**.
+
+. **Browse App Catalogue** and select `SCIM 2.0 Test App (Header Auth)`.
+
+. In the **Sign-On Options tab**, select **Secure Web Authentication**.
+
+. Tab over to **Provisioning** > **Configure API Integration** > **Enable API Integration**.
+
+. Put the ngrok URL in the **Base URL** field and append `/scim` to the end.
+
+. Click **Test API Credentials**. You can check the ngrok logs at http://localhost:4040.
+
+. **Save** and select **Edit** next to **Provisioning to App**. Select the following:
+
+- Create Users
+- Update User Attributes
+- Deactive Users
+
+. **Save** these settings.
+
+== Test syncing identities
+
+. When a user is assigned to the Okta app, a `POST` will be sent to `/scim/Users`
+
+. When a group is assigned, a `POST` will be sent to `/scim/Users` with each member
+
+. If Push Groups enabled, assigning a new group will `POST` to `/scim/Groups`
+
+. Update a user's attributes to send a `PUT` or `PATCH` to `/scim/Users/{id}`
+
+. Remove a user to send a `PATCH` to  `/scim/Users/{id}` to deactivate the user
+
+== Protect SCIM endpoints with Spring Security
+
+. Configure basic authentication or OAuth.
