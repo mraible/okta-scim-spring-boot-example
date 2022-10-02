@@ -133,7 +133,7 @@ public class ScimUserService implements Repository<ScimUser> {
         User user = new User();
         user.setId(scimUser.getId());
         user.setEmail(scimUser.getPrimaryEmailAddress().get().getValue());
-        user.setLogin(user.getEmail().toLowerCase().toLowerCase(Locale.ROOT));
+        user.setLogin(scimUser.getExternalId());
         user.setFirstName(scimUser.getName().getGivenName());
         user.setLastName(scimUser.getName().getFamilyName());
         user.setActivated(scimUser.getActive());
@@ -200,6 +200,7 @@ public class ScimUserService implements Repository<ScimUser> {
             .map(user -> {
                 ScimUser scimUser = new ScimUser();
                 scimUser.setUserName(user.getLogin());
+                scimUser.setExternalId(user.getLogin());
                 scimUser.setName(new Name().setFamilyName(user.getLastName()).setGivenName(user.getFirstName()));
                 scimUser.setEmails(List.of(new Email().setValue(user.getEmail()).setPrimary(true)));
                 List<ResourceReference> groups = List.of();

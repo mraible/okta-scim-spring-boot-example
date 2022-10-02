@@ -1,10 +1,10 @@
 package com.okta.developer.web.rest;
 
 import com.okta.developer.domain.User;
-import com.okta.developer.security.SecurityUtils;
 import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.AdminUserDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import java.security.Principal;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,21 +39,19 @@ public class AccountResource {
     /**
      * {@code GET  /account} : get the current user.
      *
+     * @param principal the current user; resolves to {@code null} if not authenticated.
      * @return the current user.
      * @throws AccountResourceException {@code 500 (Internal Server Error)} if the user couldn't be returned.
      */
     @GetMapping("/account")
-    public AdminUserDTO getAccount() {
-        Optional<String> email = SecurityUtils.getCurrentUserLogin();
-
-        if (email.isPresent()) {
-            Optional<User> user = userService.getUserWithAuthoritiesByLogin(email.get());
-            if (user.isPresent()) {
-                return new AdminUserDTO(user.get());
-            }
+    @SuppressWarnings("unchecked")
+    public AdminUserDTO getAccount(Principal principal) {
+        Optional<User> user = userService.getUserWithAuthoritiesByLogin(principal.getName());
+        if (user.isPresent()) {
+            return new AdminUserDTO(user.get());
+        } else {
+            throw new AccountResourceException("User could not be found");
         }
-
-        throw new AccountResourceException("User could not be found");
     }
 
     /**
