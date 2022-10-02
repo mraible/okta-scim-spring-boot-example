@@ -5,9 +5,11 @@ import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.AdminUserDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
+import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,7 +48,15 @@ public class AccountResource {
     @GetMapping("/account")
     @SuppressWarnings("unchecked")
     public AdminUserDTO getAccount(Principal principal) {
-        Optional<User> user = userService.getUserWithAuthoritiesByLogin(principal.getName());
+        // FIXME: really ugly line, could cause NPE and class cast exceptions
+        String email =
+            ((OAuth2AuthenticationToken) principal).getPrincipal()
+                .getAttributes()
+                .getOrDefault("email", "")
+                .toString()
+                .toLowerCase(Locale.ROOT);
+
+        Optional<User> user = userService.getUserWithAuthoritiesByLogin(email);
         if (user.isPresent()) {
             return new AdminUserDTO(user.get());
         } else {

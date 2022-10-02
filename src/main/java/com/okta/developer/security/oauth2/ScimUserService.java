@@ -8,12 +8,13 @@ import com.okta.developer.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.ws.rs.core.Response;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.directory.scim.core.repository.Repository;
 import org.apache.directory.scim.core.repository.UpdateRequest;
@@ -33,7 +34,6 @@ import org.apache.directory.scim.spec.schema.ResourceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 /**
@@ -107,6 +107,7 @@ public class ScimUserService implements Repository<ScimUser> {
         if (user.isPresent()) {
             throw new UnableToCreateResourceException(Response.Status.CONFLICT, "User '" + resource.getUserName() + "' already exists.");
         } else {
+            resource.setId(UUID.randomUUID().toString()); // TODO: this should probably be configured in the persistence layer?
             saveUserFromIdP(resource);
         }
 
@@ -132,6 +133,7 @@ public class ScimUserService implements Repository<ScimUser> {
         User user = new User();
         user.setId(scimUser.getId());
         user.setEmail(scimUser.getPrimaryEmailAddress().get().getValue());
+        user.setLogin(user.getEmail().toLowerCase().toLowerCase(Locale.ROOT));
         user.setFirstName(scimUser.getName().getGivenName());
         user.setLastName(scimUser.getName().getFamilyName());
         user.setActivated(scimUser.getActive());
