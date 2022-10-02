@@ -49,13 +49,12 @@ public class ScimGroupService implements Repository<ScimGroup> {
 
     @Override
     public ScimGroup update(UpdateRequest<ScimGroup> updateRequest) throws ResourceException {
-        log.debug("todo: updating");
+        log.debug("todo: updating {}", updateRequest);
         return updateRequest.getResource();
     }
 
     @Override
     public ScimGroup get(String s) throws ResourceException {
-        // who the hell knows
         log.debug("get() with {}", s);
         return new ScimGroup();
     }

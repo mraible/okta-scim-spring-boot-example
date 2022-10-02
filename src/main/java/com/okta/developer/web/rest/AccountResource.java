@@ -44,7 +44,6 @@ public class AccountResource {
      * @throws AccountResourceException {@code 500 (Internal Server Error)} if the user couldn't be returned.
      */
     @GetMapping("/account")
-    @SuppressWarnings("unchecked")
     public AdminUserDTO getAccount(Principal principal) {
         Optional<User> user = userService.getUserWithAuthoritiesByLogin(principal.getName());
         if (user.isPresent()) {
