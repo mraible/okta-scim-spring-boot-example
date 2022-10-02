@@ -161,6 +161,8 @@ spring:
             client-secret: web_app
             scope: openid, profile, email, offline_access # last one for refresh tokens
 
+  jersey:
+    application-path: /scim
 server:
   servlet:
     session:
