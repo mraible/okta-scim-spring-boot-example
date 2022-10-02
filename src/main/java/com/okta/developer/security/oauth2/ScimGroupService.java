@@ -80,7 +80,7 @@ public class ScimGroupService implements Repository<ScimGroup> {
             })
             .skip(startIndex)
             .limit(count)
-            .filter(FilterExpressions.inMemory(filter, schemaRegistry.getSchema(ScimUser.SCHEMA_URI)))
+            .filter(FilterExpressions.inMemory(filter, schemaRegistry.getSchema(ScimGroup.SCHEMA_URI)))
             .collect(Collectors.toList());
 
         return new FilterResponse<>(result, pageRequest, result.size());
