@@ -194,6 +194,6 @@ https://developer.okta.com/blog/2021/09/01/flask-scim-server#option-1-scim-templ
 
 . Remove a user to send a `PATCH` to  `/scim/Users/{id}` to deactivate the user
 
-== Protect the SCIM endpoints with Spring Security
+== Protect SCIM endpoints with Spring Security
 
 . Configure basic authentication or OAuth.
