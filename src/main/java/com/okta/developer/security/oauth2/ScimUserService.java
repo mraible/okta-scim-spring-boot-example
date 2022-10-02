@@ -117,13 +117,17 @@ public class ScimUserService implements Repository<ScimUser> {
     private ScimUser saveUserFromIdP(ScimUser scimUser) {
         // save authorities in to sync user roles/groups between IdP and JHipster's local database
         Collection<String> dbAuthorities = authorityRepository.findAll().stream().map(Authority::getName).toList();
-        Collection<String> userAuthorities = scimUser.getGroups().stream().map(ResourceReference::getValue).toList();
-        for (String authority : userAuthorities) {
-            if (!dbAuthorities.contains(authority)) {
-                log.debug("Saving authority '{}' in local database", authority);
-                Authority authorityToSave = new Authority();
-                authorityToSave.setName(authority);
-                authorityRepository.save(authorityToSave);
+        List<ResourceReference> groups = scimUser.getGroups();
+
+        if (groups != null) {
+            Collection<String> userAuthorities = groups.stream().map(ResourceReference::getValue).toList();
+            for (String authority : userAuthorities) {
+                if (!dbAuthorities.contains(authority)) {
+                    log.debug("Saving authority '{}' in local database", authority);
+                    Authority authorityToSave = new Authority();
+                    authorityToSave.setName(authority);
+                    authorityRepository.save(authorityToSave);
+                }
             }
         }
 
