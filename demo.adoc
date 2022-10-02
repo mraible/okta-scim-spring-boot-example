@@ -343,6 +343,46 @@ public class ScimGroupService implements Repository<ScimGroup> {
 <logger name="org.glassfish" level="WARN"/>
 ----
 
+. Configure Spring to serve up Jersey endpoint at `/scim`:
+
+[source,yaml]
+.src/main/resources/config/application.yml
+----
+jersey:
+    application-path: /scim
+----
+
+. Update `SecurityConfiguration` to skip CSRF for Jersey endpoints:
++
+[source,java]
+.src/main/java/com/okta/developer/config/SecurityConfiguration.java
+----
+http
+    .csrf()
+    .ignoringAntMatchers("/h2-console/**", "/scim/**")
+----
+
+. Enable CORS for `/scim/**`.
++
+[source,java]
+.src/main/java/com/okta/developer/config/WebConfigurer.java
+----
+source.registerCorsConfiguration("/scim/**", config);
+----
+
+. Update `AccountResource#getAccount()` to get user from database:
++
+[source,java]
+----
+String email =
+    ((OAuth2AuthenticationToken) principal).getPrincipal()
+        .getAttributes()
+        .getOrDefault("email", "")
+        .toString()
+        .toLowerCase(Locale.ROOT);
+Optional<User> user = userService.getUserWithAuthoritiesByLogin(email);
+----
+
 == Test syncing identities
 
 . Start ngrok and confirm URL works from Okta SCIM test app:
