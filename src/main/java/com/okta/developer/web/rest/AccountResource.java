@@ -1,15 +1,13 @@
 package com.okta.developer.web.rest;
 
 import com.okta.developer.domain.User;
+import com.okta.developer.security.SecurityUtils;
 import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.AdminUserDTO;
 import jakarta.servlet.http.HttpServletRequest;
-import java.security.Principal;
-import java.util.Locale;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,27 +39,21 @@ public class AccountResource {
     /**
      * {@code GET  /account} : get the current user.
      *
-     * @param principal the current user; resolves to {@code null} if not authenticated.
      * @return the current user.
      * @throws AccountResourceException {@code 500 (Internal Server Error)} if the user couldn't be returned.
      */
     @GetMapping("/account")
-    @SuppressWarnings("unchecked")
-    public AdminUserDTO getAccount(Principal principal) {
-        // FIXME: really ugly line, could cause NPE and class cast exceptions
-        String email =
-            ((OAuth2AuthenticationToken) principal).getPrincipal()
-                .getAttributes()
-                .getOrDefault("email", "")
-                .toString()
-                .toLowerCase(Locale.ROOT);
+    public AdminUserDTO getAccount() {
+        Optional<String> email = SecurityUtils.getCurrentUserLogin();
 
-        Optional<User> user = userService.getUserWithAuthoritiesByLogin(email);
-        if (user.isPresent()) {
-            return new AdminUserDTO(user.get());
-        } else {
-            throw new AccountResourceException("User could not be found");
+        if (email.isPresent()) {
+            Optional<User> user = userService.getUserWithAuthoritiesByLogin(email.get());
+            if (user.isPresent()) {
+                return new AdminUserDTO(user.get());
+            }
         }
+
+        throw new AccountResourceException("User could not be found");
     }
 
     /**
