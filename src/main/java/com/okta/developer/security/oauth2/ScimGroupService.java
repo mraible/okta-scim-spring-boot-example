@@ -1,7 +1,11 @@
 package com.okta.developer.security.oauth2;
 
+import com.okta.developer.domain.Authority;
+import com.okta.developer.domain.User;
 import com.okta.developer.repository.AuthorityRepository;
+import com.okta.developer.repository.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.directory.scim.core.repository.Repository;
 import org.apache.directory.scim.core.repository.UpdateRequest;
@@ -17,9 +21,11 @@ import org.apache.directory.scim.spec.resources.Name;
 import org.apache.directory.scim.spec.resources.ScimGroup;
 import org.apache.directory.scim.spec.resources.ScimUser;
 import org.apache.directory.scim.spec.schema.ResourceReference;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ScimGroupService implements Repository<ScimGroup> {
@@ -28,6 +34,8 @@ public class ScimGroupService implements Repository<ScimGroup> {
 
     private final AuthorityRepository authorityRepository;
 
+    private final UserRepository userRepository;
+
     private final SchemaRegistry schemaRegistry;
 
     @Override
@@ -35,28 +43,33 @@ public class ScimGroupService implements Repository<ScimGroup> {
         return ScimGroup.class;
     }
 
-    public ScimGroupService(AuthorityRepository authorityRepository, SchemaRegistry schemaRegistry) {
+    public ScimGroupService(AuthorityRepository authorityRepository, UserRepository userRepository, SchemaRegistry schemaRegistry) {
         this.authorityRepository = authorityRepository;
+        this.userRepository = userRepository;
         this.schemaRegistry = schemaRegistry;
     }
 
     @Override
+    @Transactional
     public ScimGroup create(ScimGroup scimGroup) throws ResourceException {
         // check if authority exists
         log.debug("check if authority exists, if not, create");
-        return scimGroup;
+
+        return createOrUpdateGroup(scimGroup);
     }
 
     @Override
+    @Transactional
     public ScimGroup update(UpdateRequest<ScimGroup> updateRequest) throws ResourceException {
         log.debug("todo: updating {}", updateRequest);
-        return updateRequest.getResource();
+
+        return createOrUpdateGroup(updateRequest.getResource());
     }
 
     @Override
     public ScimGroup get(String s) throws ResourceException {
         log.debug("get() with {}", s);
-        return new ScimGroup();
+        return authorityRepository.findByName(s).map(authority -> toScimGroup(authority.getName())).orElse(null);
     }
 
     @Override
@@ -72,11 +85,7 @@ public class ScimGroupService implements Repository<ScimGroup> {
         List<ScimGroup> result = authorityRepository
             .findAll()
             .stream()
-            .map(authority -> {
-                ScimGroup scimGroup = new ScimGroup();
-                scimGroup.setDisplayName(authority.getName());
-                return scimGroup;
-            })
+            .map(authority -> toScimGroup(authority.getName()))
             .skip(startIndex)
             .limit(count)
             .filter(FilterExpressions.inMemory(filter, schemaRegistry.getSchema(ScimGroup.SCHEMA_URI)))
@@ -87,6 +96,40 @@ public class ScimGroupService implements Repository<ScimGroup> {
 
     @Override
     public void delete(String s) throws ResourceException {
-        log.debug("delete...");
+        authorityRepository.delete(new Authority(s));
+    }
+
+    private ScimGroup createOrUpdateGroup(ScimGroup scimGroup) {
+        String groupId = scimGroup.getDisplayName();
+        scimGroup.setId(groupId);
+        authorityRepository.save(new Authority(groupId));
+
+        scimGroup
+            .getMembers()
+            .stream()
+            .forEach(memberRef -> {
+                // Assume these are always userIds, but per spec they could be groupIds (Okta only supports users here)
+                String id = memberRef.getValue();
+                Optional<User> optionalUser = userRepository.findById(id);
+                optionalUser.ifPresentOrElse(
+                    user -> {
+                        user.getAuthorities().add(new Authority(groupId));
+                        // TODO: user cache needs to be invalidated, so new groups/authorities are loaded
+                        userRepository.save(user);
+                    },
+                    () -> log.warn("User {}, was not found, could not assign group: {}", id, groupId)
+                );
+            });
+
+        return scimGroup;
+    }
+
+    private ScimGroup toScimGroup(String name) {
+        ScimGroup scimGroup = new ScimGroup();
+        scimGroup.setId(name);
+        scimGroup.setDisplayName(name);
+
+        // TODO add group members
+        return scimGroup;
     }
 }
