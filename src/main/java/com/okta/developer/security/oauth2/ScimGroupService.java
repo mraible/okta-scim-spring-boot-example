@@ -5,6 +5,7 @@ import com.okta.developer.domain.User;
 import com.okta.developer.repository.AuthorityRepository;
 import com.okta.developer.repository.UserRepository;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.directory.scim.core.repository.Repository;
@@ -16,14 +17,10 @@ import org.apache.directory.scim.spec.filter.FilterExpressions;
 import org.apache.directory.scim.spec.filter.FilterResponse;
 import org.apache.directory.scim.spec.filter.PageRequest;
 import org.apache.directory.scim.spec.filter.SortRequest;
-import org.apache.directory.scim.spec.resources.Email;
-import org.apache.directory.scim.spec.resources.Name;
 import org.apache.directory.scim.spec.resources.ScimGroup;
-import org.apache.directory.scim.spec.resources.ScimUser;
-import org.apache.directory.scim.spec.schema.ResourceReference;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,15 +35,23 @@ public class ScimGroupService implements Repository<ScimGroup> {
 
     private final SchemaRegistry schemaRegistry;
 
+    private final CacheManager cacheManager;
+
     @Override
     public Class<ScimGroup> getResourceClass() {
         return ScimGroup.class;
     }
 
-    public ScimGroupService(AuthorityRepository authorityRepository, UserRepository userRepository, SchemaRegistry schemaRegistry) {
+    public ScimGroupService(
+        AuthorityRepository authorityRepository,
+        UserRepository userRepository,
+        SchemaRegistry schemaRegistry,
+        CacheManager cacheManager
+    ) {
         this.authorityRepository = authorityRepository;
         this.userRepository = userRepository;
         this.schemaRegistry = schemaRegistry;
+        this.cacheManager = cacheManager;
     }
 
     @Override
@@ -58,7 +63,7 @@ public class ScimGroupService implements Repository<ScimGroup> {
     @Override
     @Transactional
     public ScimGroup update(UpdateRequest<ScimGroup> updateRequest) throws ResourceException {
-        log.debug("todo: updating {}", updateRequest);
+        log.debug("todo: updating {}", updateRequest.toString());
 
         return createOrUpdateGroup(updateRequest.getResource());
     }
@@ -103,7 +108,6 @@ public class ScimGroupService implements Repository<ScimGroup> {
 
         scimGroup
             .getMembers()
-            .stream()
             .forEach(memberRef -> {
                 // Assume these are always userIds, but per spec they could be groupIds (Okta only supports users here)
                 String id = memberRef.getValue();
@@ -111,14 +115,21 @@ public class ScimGroupService implements Repository<ScimGroup> {
                 optionalUser.ifPresentOrElse(
                     user -> {
                         user.getAuthorities().add(new Authority(groupId));
-                        // TODO: user cache needs to be invalidated, so new groups/authorities are loaded
                         userRepository.save(user);
+                        clearUserCaches(user);
                     },
                     () -> log.warn("User {}, was not found, could not assign group: {}", id, groupId)
                 );
             });
 
         return scimGroup;
+    }
+
+    private void clearUserCaches(User user) {
+        Objects.requireNonNull(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE)).evict(user.getLogin());
+        if (user.getEmail() != null) {
+            Objects.requireNonNull(cacheManager.getCache(UserRepository.USERS_BY_EMAIL_CACHE)).evict(user.getEmail());
+        }
     }
 
     private ScimGroup toScimGroup(String name) {

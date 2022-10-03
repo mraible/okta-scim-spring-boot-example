@@ -150,6 +150,9 @@ spring:
     ansi:
       console-available: true
   security:
+    user:
+      name: admin
+      password: admin
     oauth2:
       client:
         provider:
@@ -224,3 +227,4 @@ jhipster:
 # ===================================================================
 
 # application:
+

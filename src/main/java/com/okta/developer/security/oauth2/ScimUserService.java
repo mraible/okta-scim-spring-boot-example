@@ -8,7 +8,6 @@ import com.okta.developer.repository.UserRepository;
 import jakarta.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -81,7 +80,11 @@ public class ScimUserService implements Repository<ScimUser> {
     private void saveUser(ScimUser scimUser) {
         // save authorities in to sync user roles/groups between IdP and JHipster's local database
         Collection<String> dbAuthorities = authorityRepository.findAll().stream().map(Authority::getName).toList();
+        log.debug("authorities from database: " + dbAuthorities);
         Collection<String> userAuthorities = scimUser.getGroups().stream().map(ResourceReference::getValue).toList();
+        log.debug("scim.groups: " + scimUser.getGroups());
+        log.debug("authorities from scim: " + userAuthorities);
+
         for (String authority : userAuthorities) {
             if (!dbAuthorities.contains(authority)) {
                 log.debug("Saving authority '{}' in local database", authority);
@@ -92,14 +95,13 @@ public class ScimUserService implements Repository<ScimUser> {
         }
 
         log.debug("Saving user '{}' in local database", scimUser.getUserName());
-        log.debug(scimUser.toString());
 
         User user = new User();
         user.setId(scimUser.getExternalId());
         if (scimUser.getPrimaryEmailAddress().isPresent()) {
             user.setEmail(scimUser.getPrimaryEmailAddress().get().getValue());
         }
-        user.setLogin(user.getEmail().toLowerCase().toLowerCase(Locale.ROOT));
+        user.setLogin(user.getEmail());
         user.setFirstName(scimUser.getName().getGivenName());
         user.setLastName(scimUser.getName().getFamilyName());
         user.setActivated(scimUser.getActive());
