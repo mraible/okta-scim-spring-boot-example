@@ -4,16 +4,7 @@ import configureStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
 import sinon from 'sinon';
 
-import reducer, {
-  createEntity,
-  deleteEntity,
-  getEntities,
-  searchEntities,
-  getEntity,
-  updateEntity,
-  partialUpdateEntity,
-  reset,
-} from './points.reducer';
+import reducer, { createEntity, deleteEntity, getEntities, getEntity, updateEntity, partialUpdateEntity, reset } from './points.reducer';
 import { EntityState } from 'app/shared/reducers/reducer.utils';
 import { IPoints, defaultValue } from 'app/shared/model/points.model';
 
@@ -61,7 +52,7 @@ describe('Entities reducer tests', () => {
 
   describe('Requests', () => {
     it('should set state to loading', () => {
-      testMultipleTypes([getEntities.pending.type, searchEntities.pending.type, getEntity.pending.type], {}, state => {
+      testMultipleTypes([getEntities.pending.type, getEntity.pending.type], {}, state => {
         expect(state).toMatchObject({
           errorMessage: null,
           updateSuccess: false,
@@ -96,7 +87,6 @@ describe('Entities reducer tests', () => {
       testMultipleTypes(
         [
           getEntities.rejected.type,
-          searchEntities.rejected.type,
           getEntity.rejected.type,
           createEntity.rejected.type,
           updateEntity.rejected.type,
@@ -124,20 +114,6 @@ describe('Entities reducer tests', () => {
       expect(
         reducer(undefined, {
           type: getEntities.fulfilled.type,
-          payload,
-        })
-      ).toEqual({
-        ...initialState,
-        loading: false,
-        totalItems: payload.headers['x-total-count'],
-        entities: payload.data,
-      });
-    });
-    it('should search all entities', () => {
-      const payload = { data: [{ 1: 'fake1' }, { 2: 'fake2' }], headers: { 'x-total-count': 123 } };
-      expect(
-        reducer(undefined, {
-          type: searchEntities.fulfilled.type,
           payload,
         })
       ).toEqual({
@@ -215,20 +191,6 @@ describe('Entities reducer tests', () => {
         },
       ];
       await store.dispatch(getEntities({}));
-      expect(store.getActions()[0]).toMatchObject(expectedActions[0]);
-      expect(store.getActions()[1]).toMatchObject(expectedActions[1]);
-    });
-    it('dispatches SEARCH_POINTS actions', async () => {
-      const expectedActions = [
-        {
-          type: searchEntities.pending.type,
-        },
-        {
-          type: searchEntities.fulfilled.type,
-          payload: resolvedObject,
-        },
-      ];
-      await store.dispatch(searchEntities({}));
       expect(store.getActions()[0]).toMatchObject(expectedActions[0]);
       expect(store.getActions()[1]).toMatchObject(expectedActions[1]);
     });

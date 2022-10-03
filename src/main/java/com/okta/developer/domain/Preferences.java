@@ -1,9 +1,9 @@
 package com.okta.developer.domain;
 
 import com.okta.developer.domain.enumeration.Units;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import java.io.Serializable;
-import javax.persistence.*;
-import javax.validation.constraints.*;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -13,7 +13,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Entity
 @Table(name = "preferences")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-@org.springframework.data.elasticsearch.annotations.Document(indexName = "preferences")
 @SuppressWarnings("common-java:DuplicatedBlocks")
 public class Preferences implements Serializable {
 

@@ -11,7 +11,6 @@ application {
     authenticationType oauth2,
     prodDatabaseType postgresql,
     buildTool gradle,
-    searchEngine elasticsearch,
     testFrameworks [cypress],
     clientFramework react,
     enableTranslation true,

@@ -3,7 +3,6 @@ package com.okta.developer.web.rest;
 import static com.okta.developer.test.util.OAuth2TestUtil.TEST_USER_LOGIN;
 import static com.okta.developer.test.util.OAuth2TestUtil.registerAuthenticationToken;
 import static com.okta.developer.test.util.OAuth2TestUtil.testAuthenticationToken;
-import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 

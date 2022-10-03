@@ -2,12 +2,12 @@ package com.okta.developer;
 
 import com.okta.developer.config.ApplicationProperties;
 import com.okta.developer.config.CRLFLogConverter;
+import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
-import javax.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

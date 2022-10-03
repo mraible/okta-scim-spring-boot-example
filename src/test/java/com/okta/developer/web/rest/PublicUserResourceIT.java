@@ -9,9 +9,8 @@ import com.okta.developer.IntegrationTest;
 import com.okta.developer.config.TestSecurityConfiguration;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.UserRepository;
-import com.okta.developer.repository.search.UserSearchRepository;
 import com.okta.developer.security.AuthoritiesConstants;
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,14 +33,6 @@ class PublicUserResourceIT {
 
     @Autowired
     private UserRepository userRepository;
-
-    /**
-     * This repository is mocked in the com.okta.developer.repository.search test package.
-     *
-     * @see com.okta.developer.repository.search.UserSearchRepositoryMockConfiguration
-     */
-    @Autowired
-    private UserSearchRepository mockUserSearchRepository;
 
     @Autowired
     private EntityManager em;

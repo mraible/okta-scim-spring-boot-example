@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Input, InputGroup, FormGroup, Form, Row, Col, Table } from 'reactstrap';
-import { Translate, translate } from 'react-jhipster';
+import { Button, Table } from 'reactstrap';
+import { Translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { APP_DATE_FORMAT, APP_LOCAL_DATE_FORMAT } from 'app/config/constants';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
 import { IPreferences } from 'app/shared/model/preferences.model';
-import { searchEntities, getEntities } from './preferences.reducer';
+import { getEntities } from './preferences.reducer';
 
 export const Preferences = () => {
   const dispatch = useAppDispatch();
@@ -16,28 +16,12 @@ export const Preferences = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [search, setSearch] = useState('');
-
   const preferencesList = useAppSelector(state => state.preferences.entities);
   const loading = useAppSelector(state => state.preferences.loading);
 
   useEffect(() => {
     dispatch(getEntities({}));
   }, []);
-
-  const startSearching = e => {
-    if (search) {
-      dispatch(searchEntities({ query: search }));
-    }
-    e.preventDefault();
-  };
-
-  const clear = () => {
-    setSearch('');
-    dispatch(getEntities({}));
-  };
-
-  const handleSearch = event => setSearch(event.target.value);
 
   const handleSyncList = () => {
     dispatch(getEntities({}));
@@ -59,29 +43,6 @@ export const Preferences = () => {
           </Link>
         </div>
       </h2>
-      <Row>
-        <Col sm="12">
-          <Form onSubmit={startSearching}>
-            <FormGroup>
-              <InputGroup>
-                <Input
-                  type="text"
-                  name="search"
-                  defaultValue={search}
-                  onChange={handleSearch}
-                  placeholder={translate('healthPointsApp.preferences.home.search')}
-                />
-                <Button className="input-group-addon">
-                  <FontAwesomeIcon icon="search" />
-                </Button>
-                <Button type="reset" className="input-group-addon" onClick={clear}>
-                  <FontAwesomeIcon icon="trash" />
-                </Button>
-              </InputGroup>
-            </FormGroup>
-          </Form>
-        </Col>
-      </Row>
       <div className="table-responsive">
         {preferencesList && preferencesList.length > 0 ? (
           <Table responsive>

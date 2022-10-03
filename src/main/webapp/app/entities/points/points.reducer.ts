@@ -16,14 +16,8 @@ const initialState: EntityState<IPoints> = {
 };
 
 const apiUrl = 'api/points';
-const apiSearchUrl = 'api/_search/points';
 
 // Actions
-
-export const searchEntities = createAsyncThunk('points/search_entity', async ({ query, page, size, sort }: IQueryParams) => {
-  const requestUrl = `${apiSearchUrl}?query=${query}${sort ? `&page=${page}&size=${size}&sort=${sort}` : ''}`;
-  return axios.get<IPoints[]>(requestUrl);
-});
 
 export const getEntities = createAsyncThunk('points/fetch_entity_list', async ({ page, size, sort }: IQueryParams) => {
   const requestUrl = `${apiUrl}${sort ? `?page=${page}&size=${size}&sort=${sort}&` : '?'}cacheBuster=${new Date().getTime()}`;
@@ -96,7 +90,7 @@ export const PointsSlice = createEntitySlice({
         state.updateSuccess = true;
         state.entity = {};
       })
-      .addMatcher(isFulfilled(getEntities, searchEntities), (state, action) => {
+      .addMatcher(isFulfilled(getEntities), (state, action) => {
         const { data, headers } = action.payload;
 
         return {
@@ -112,7 +106,7 @@ export const PointsSlice = createEntitySlice({
         state.updateSuccess = true;
         state.entity = action.payload.data;
       })
-      .addMatcher(isPending(getEntities, getEntity, searchEntities), state => {
+      .addMatcher(isPending(getEntities, getEntity), state => {
         state.errorMessage = null;
         state.updateSuccess = false;
         state.loading = true;

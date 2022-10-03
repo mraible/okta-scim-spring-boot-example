@@ -15,7 +15,7 @@ describe('Weight e2e test', () => {
   const weightPageUrlPattern = new RegExp('/weight(\\?.*)?$');
   const username = Cypress.env('E2E_USERNAME') ?? 'user';
   const password = Cypress.env('E2E_PASSWORD') ?? 'user';
-  const weightSample = { timestamp: '2022-09-30T02:09:21.808Z', weight: 1792 };
+  const weightSample = { timestamp: '2022-09-29T16:15:30.703Z', weight: 62064 };
 
   let weight;
 
@@ -162,9 +162,9 @@ describe('Weight e2e test', () => {
     });
 
     it('should create an instance of Weight', () => {
-      cy.get(`[data-cy="timestamp"]`).type('2022-09-29T19:57').blur().should('have.value', '2022-09-29T19:57');
+      cy.get(`[data-cy="timestamp"]`).type('2022-09-30T06:06').blur().should('have.value', '2022-09-30T06:06');
 
-      cy.get(`[data-cy="weight"]`).type('90727').should('have.value', '90727');
+      cy.get(`[data-cy="weight"]`).type('2070').should('have.value', '2070');
 
       cy.get(entityCreateSaveButtonSelector).click();
 

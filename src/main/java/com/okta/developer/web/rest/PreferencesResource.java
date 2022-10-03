@@ -1,20 +1,15 @@
 package com.okta.developer.web.rest;
 
-import static org.elasticsearch.index.query.QueryBuilders.*;
-
 import com.okta.developer.domain.Preferences;
 import com.okta.developer.repository.PreferencesRepository;
-import com.okta.developer.repository.search.PreferencesSearchRepository;
 import com.okta.developer.web.rest.errors.BadRequestAlertException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,11 +36,8 @@ public class PreferencesResource {
 
     private final PreferencesRepository preferencesRepository;
 
-    private final PreferencesSearchRepository preferencesSearchRepository;
-
-    public PreferencesResource(PreferencesRepository preferencesRepository, PreferencesSearchRepository preferencesSearchRepository) {
+    public PreferencesResource(PreferencesRepository preferencesRepository) {
         this.preferencesRepository = preferencesRepository;
-        this.preferencesSearchRepository = preferencesSearchRepository;
     }
 
     /**
@@ -62,7 +54,6 @@ public class PreferencesResource {
             throw new BadRequestAlertException("A new preferences cannot already have an ID", ENTITY_NAME, "idexists");
         }
         Preferences result = preferencesRepository.save(preferences);
-        preferencesSearchRepository.index(result);
         return ResponseEntity
             .created(new URI("/api/preferences/" + result.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
@@ -97,7 +88,6 @@ public class PreferencesResource {
         }
 
         Preferences result = preferencesRepository.save(preferences);
-        preferencesSearchRepository.index(result);
         return ResponseEntity
             .ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, preferences.getId().toString()))
@@ -144,12 +134,7 @@ public class PreferencesResource {
 
                 return existingPreferences;
             })
-            .map(preferencesRepository::save)
-            .map(savedPreferences -> {
-                preferencesSearchRepository.save(savedPreferences);
-
-                return savedPreferences;
-            });
+            .map(preferencesRepository::save);
 
         return ResponseUtil.wrapOrNotFound(
             result,
@@ -196,23 +181,9 @@ public class PreferencesResource {
     public ResponseEntity<Void> deletePreferences(@PathVariable Long id) {
         log.debug("REST request to delete Preferences : {}", id);
         preferencesRepository.deleteById(id);
-        preferencesSearchRepository.deleteById(id);
         return ResponseEntity
             .noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
-    }
-
-    /**
-     * {@code SEARCH  /_search/preferences?query=:query} : search for the preferences corresponding
-     * to the query.
-     *
-     * @param query the query of the preferences search.
-     * @return the result of the search.
-     */
-    @GetMapping("/_search/preferences")
-    public List<Preferences> searchPreferences(@RequestParam String query) {
-        log.debug("REST request to search Preferences for query {}", query);
-        return StreamSupport.stream(preferencesSearchRepository.search(query).spliterator(), false).collect(Collectors.toList());
     }
 }

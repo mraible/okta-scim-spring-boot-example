@@ -15,7 +15,7 @@ describe('BloodPressure e2e test', () => {
   const bloodPressurePageUrlPattern = new RegExp('/blood-pressure(\\?.*)?$');
   const username = Cypress.env('E2E_USERNAME') ?? 'user';
   const password = Cypress.env('E2E_PASSWORD') ?? 'user';
-  const bloodPressureSample = { timestamp: '2022-09-30T10:04:37.606Z', systolic: 27476, diastolic: 27392 };
+  const bloodPressureSample = { timestamp: '2022-09-30T12:46:35.549Z', systolic: 82107, diastolic: 66851 };
 
   let bloodPressure;
 
@@ -162,11 +162,11 @@ describe('BloodPressure e2e test', () => {
     });
 
     it('should create an instance of BloodPressure', () => {
-      cy.get(`[data-cy="timestamp"]`).type('2022-09-29T21:39').blur().should('have.value', '2022-09-29T21:39');
+      cy.get(`[data-cy="timestamp"]`).type('2022-09-29T15:05').blur().should('have.value', '2022-09-29T15:05');
 
-      cy.get(`[data-cy="systolic"]`).type('88377').should('have.value', '88377');
+      cy.get(`[data-cy="systolic"]`).type('75765').should('have.value', '75765');
 
-      cy.get(`[data-cy="diastolic"]`).type('4724').should('have.value', '4724');
+      cy.get(`[data-cy="diastolic"]`).type('70637').should('have.value', '70637');
 
       cy.get(entityCreateSaveButtonSelector).click();
 

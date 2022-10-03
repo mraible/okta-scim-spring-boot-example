@@ -10,14 +10,13 @@ import com.okta.developer.IntegrationTest;
 import com.okta.developer.domain.Authority;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.UserRepository;
-import com.okta.developer.repository.search.UserSearchRepository;
 import com.okta.developer.security.AuthoritiesConstants;
 import com.okta.developer.service.dto.AdminUserDTO;
 import com.okta.developer.service.mapper.UserMapper;
+import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Consumer;
-import javax.persistence.EntityManager;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,9 +52,6 @@ class UserResourceIT {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private UserSearchRepository userSearchRepository;
 
     @Autowired
     private UserMapper userMapper;

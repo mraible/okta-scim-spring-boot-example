@@ -1,20 +1,15 @@
 package com.okta.developer.web.rest;
 
-import static org.elasticsearch.index.query.QueryBuilders.*;
-
 import com.okta.developer.domain.Points;
 import com.okta.developer.repository.PointsRepository;
-import com.okta.developer.repository.search.PointsSearchRepository;
 import com.okta.developer.web.rest.errors.BadRequestAlertException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,11 +42,8 @@ public class PointsResource {
 
     private final PointsRepository pointsRepository;
 
-    private final PointsSearchRepository pointsSearchRepository;
-
-    public PointsResource(PointsRepository pointsRepository, PointsSearchRepository pointsSearchRepository) {
+    public PointsResource(PointsRepository pointsRepository) {
         this.pointsRepository = pointsRepository;
-        this.pointsSearchRepository = pointsSearchRepository;
     }
 
     /**
@@ -68,7 +60,6 @@ public class PointsResource {
             throw new BadRequestAlertException("A new points cannot already have an ID", ENTITY_NAME, "idexists");
         }
         Points result = pointsRepository.save(points);
-        pointsSearchRepository.index(result);
         return ResponseEntity
             .created(new URI("/api/points/" + result.getId()))
             .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, result.getId().toString()))
@@ -103,7 +94,6 @@ public class PointsResource {
         }
 
         Points result = pointsRepository.save(points);
-        pointsSearchRepository.index(result);
         return ResponseEntity
             .ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, points.getId().toString()))
@@ -159,12 +149,7 @@ public class PointsResource {
 
                 return existingPoints;
             })
-            .map(pointsRepository::save)
-            .map(savedPoints -> {
-                pointsSearchRepository.save(savedPoints);
-
-                return savedPoints;
-            });
+            .map(pointsRepository::save);
 
         return ResponseUtil.wrapOrNotFound(
             result,
@@ -218,29 +203,9 @@ public class PointsResource {
     public ResponseEntity<Void> deletePoints(@PathVariable Long id) {
         log.debug("REST request to delete Points : {}", id);
         pointsRepository.deleteById(id);
-        pointsSearchRepository.deleteById(id);
         return ResponseEntity
             .noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
-    }
-
-    /**
-     * {@code SEARCH  /_search/points?query=:query} : search for the points corresponding
-     * to the query.
-     *
-     * @param query the query of the points search.
-     * @param pageable the pagination information.
-     * @return the result of the search.
-     */
-    @GetMapping("/_search/points")
-    public ResponseEntity<List<Points>> searchPoints(
-        @RequestParam String query,
-        @org.springdoc.api.annotations.ParameterObject Pageable pageable
-    ) {
-        log.debug("REST request to search for a page of Points for query {}", query);
-        Page<Points> page = pointsSearchRepository.search(query, pageable);
-        HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
-        return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 }

@@ -1,7 +1,6 @@
 package com.okta.developer.web.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -12,18 +11,11 @@ import com.okta.developer.IntegrationTest;
 import com.okta.developer.domain.Preferences;
 import com.okta.developer.domain.enumeration.Units;
 import com.okta.developer.repository.PreferencesRepository;
-import com.okta.developer.repository.search.PreferencesSearchRepository;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
-import javax.persistence.EntityManager;
-import org.apache.commons.collections4.IterableUtils;
-import org.assertj.core.util.IterableUtil;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,7 +48,6 @@ class PreferencesResourceIT {
 
     private static final String ENTITY_API_URL = "/api/preferences";
     private static final String ENTITY_API_URL_ID = ENTITY_API_URL + "/{id}";
-    private static final String ENTITY_SEARCH_API_URL = "/api/_search/preferences";
 
     private static Random random = new Random();
     private static AtomicLong count = new AtomicLong(random.nextInt() + (2 * Integer.MAX_VALUE));
@@ -66,9 +57,6 @@ class PreferencesResourceIT {
 
     @Mock
     private PreferencesRepository preferencesRepositoryMock;
-
-    @Autowired
-    private PreferencesSearchRepository preferencesSearchRepository;
 
     @Autowired
     private EntityManager em;
@@ -100,12 +88,6 @@ class PreferencesResourceIT {
         return preferences;
     }
 
-    @AfterEach
-    public void cleanupElasticSearchRepository() {
-        preferencesSearchRepository.deleteAll();
-        assertThat(preferencesSearchRepository.count()).isEqualTo(0);
-    }
-
     @BeforeEach
     public void initTest() {
         preferences = createEntity(em);
@@ -115,7 +97,6 @@ class PreferencesResourceIT {
     @Transactional
     void createPreferences() throws Exception {
         int databaseSizeBeforeCreate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         // Create the Preferences
         restPreferencesMockMvc
             .perform(
@@ -129,12 +110,6 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeCreate + 1);
-        await()
-            .atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-                assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore + 1);
-            });
         Preferences testPreferences = preferencesList.get(preferencesList.size() - 1);
         assertThat(testPreferences.getWeeklyGoal()).isEqualTo(DEFAULT_WEEKLY_GOAL);
         assertThat(testPreferences.getWeightUnits()).isEqualTo(DEFAULT_WEIGHT_UNITS);
@@ -147,7 +122,6 @@ class PreferencesResourceIT {
         preferences.setId(1L);
 
         int databaseSizeBeforeCreate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
 
         // An entity with an existing ID cannot be created, so this API call must fail
         restPreferencesMockMvc
@@ -162,15 +136,12 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeCreate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void checkWeeklyGoalIsRequired() throws Exception {
         int databaseSizeBeforeTest = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         // set the field null
         preferences.setWeeklyGoal(null);
 
@@ -187,15 +158,12 @@ class PreferencesResourceIT {
 
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeTest);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void checkWeightUnitsIsRequired() throws Exception {
         int databaseSizeBeforeTest = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         // set the field null
         preferences.setWeightUnits(null);
 
@@ -212,8 +180,6 @@ class PreferencesResourceIT {
 
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeTest);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -279,8 +245,6 @@ class PreferencesResourceIT {
         preferencesRepository.saveAndFlush(preferences);
 
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        preferencesSearchRepository.save(preferences);
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
 
         // Update the preferences
         Preferences updatedPreferences = preferencesRepository.findById(preferences.getId()).get();
@@ -303,23 +267,12 @@ class PreferencesResourceIT {
         Preferences testPreferences = preferencesList.get(preferencesList.size() - 1);
         assertThat(testPreferences.getWeeklyGoal()).isEqualTo(UPDATED_WEEKLY_GOAL);
         assertThat(testPreferences.getWeightUnits()).isEqualTo(UPDATED_WEIGHT_UNITS);
-        await()
-            .atMost(5, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-                assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
-                List<Preferences> preferencesSearchList = IterableUtils.toList(preferencesSearchRepository.findAll());
-                Preferences testPreferencesSearch = preferencesSearchList.get(searchDatabaseSizeAfter - 1);
-                assertThat(testPreferencesSearch.getWeeklyGoal()).isEqualTo(UPDATED_WEEKLY_GOAL);
-                assertThat(testPreferencesSearch.getWeightUnits()).isEqualTo(UPDATED_WEIGHT_UNITS);
-            });
     }
 
     @Test
     @Transactional
     void putNonExistingPreferences() throws Exception {
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         preferences.setId(count.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
@@ -335,15 +288,12 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void putWithIdMismatchPreferences() throws Exception {
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         preferences.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -359,15 +309,12 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void putWithMissingIdPathParamPreferences() throws Exception {
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         preferences.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -383,8 +330,6 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -453,7 +398,6 @@ class PreferencesResourceIT {
     @Transactional
     void patchNonExistingPreferences() throws Exception {
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         preferences.setId(count.incrementAndGet());
 
         // If the entity doesn't have an ID, it will throw BadRequestAlertException
@@ -469,15 +413,12 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void patchWithIdMismatchPreferences() throws Exception {
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         preferences.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -493,15 +434,12 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
     @Transactional
     void patchWithMissingIdPathParamPreferences() throws Exception {
         int databaseSizeBeforeUpdate = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
         preferences.setId(count.incrementAndGet());
 
         // If url ID doesn't match entity ID, it will throw BadRequestAlertException
@@ -517,8 +455,6 @@ class PreferencesResourceIT {
         // Validate the Preferences in the database
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeUpdate);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore);
     }
 
     @Test
@@ -526,12 +462,8 @@ class PreferencesResourceIT {
     void deletePreferences() throws Exception {
         // Initialize the database
         preferencesRepository.saveAndFlush(preferences);
-        preferencesRepository.save(preferences);
-        preferencesSearchRepository.save(preferences);
 
         int databaseSizeBeforeDelete = preferencesRepository.findAll().size();
-        int searchDatabaseSizeBefore = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeBefore).isEqualTo(databaseSizeBeforeDelete);
 
         // Delete the preferences
         restPreferencesMockMvc
@@ -541,24 +473,5 @@ class PreferencesResourceIT {
         // Validate the database contains one less item
         List<Preferences> preferencesList = preferencesRepository.findAll();
         assertThat(preferencesList).hasSize(databaseSizeBeforeDelete - 1);
-        int searchDatabaseSizeAfter = IterableUtil.sizeOf(preferencesSearchRepository.findAll());
-        assertThat(searchDatabaseSizeAfter).isEqualTo(searchDatabaseSizeBefore - 1);
-    }
-
-    @Test
-    @Transactional
-    void searchPreferences() throws Exception {
-        // Initialize the database
-        preferences = preferencesRepository.saveAndFlush(preferences);
-        preferencesSearchRepository.save(preferences);
-
-        // Search the preferences
-        restPreferencesMockMvc
-            .perform(get(ENTITY_SEARCH_API_URL + "?query=id:" + preferences.getId()))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-            .andExpect(jsonPath("$.[*].id").value(hasItem(preferences.getId().intValue())))
-            .andExpect(jsonPath("$.[*].weeklyGoal").value(hasItem(DEFAULT_WEEKLY_GOAL)))
-            .andExpect(jsonPath("$.[*].weightUnits").value(hasItem(DEFAULT_WEIGHT_UNITS.toString())));
     }
 }

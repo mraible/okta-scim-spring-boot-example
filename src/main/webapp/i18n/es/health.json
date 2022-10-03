@@ -16,7 +16,6 @@
       "livenessState": "Liveness state",
       "readinessState": "Readiness state",
       "ping": "Aplicación",
-      "elasticsearch": "Elasticsearch",
       "db": "Base de Datos"
     },
     "table": {

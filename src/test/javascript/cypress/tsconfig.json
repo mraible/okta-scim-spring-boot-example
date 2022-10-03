@@ -2,7 +2,7 @@
   "extends": "../../../../tsconfig.json",
   "compilerOptions": {
     "baseUrl": "./",
-    "outDir": "../../../../build/out-tsc/cypress",
+    "outDir": "../../../../build/cypress/out-tsc",
     "target": "es2018",
     "types": ["cypress", "node"]
   },

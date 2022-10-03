@@ -15,7 +15,7 @@ describe('Points e2e test', () => {
   const pointsPageUrlPattern = new RegExp('/points(\\?.*)?$');
   const username = Cypress.env('E2E_USERNAME') ?? 'user';
   const password = Cypress.env('E2E_PASSWORD') ?? 'user';
-  const pointsSample = { date: '2022-09-30' };
+  const pointsSample = { date: '2022-09-29' };
 
   let points;
 
@@ -162,15 +162,15 @@ describe('Points e2e test', () => {
     });
 
     it('should create an instance of Points', () => {
-      cy.get(`[data-cy="date"]`).type('2022-09-29').blur().should('have.value', '2022-09-29');
+      cy.get(`[data-cy="date"]`).type('2022-09-30').blur().should('have.value', '2022-09-30');
 
-      cy.get(`[data-cy="exercise"]`).type('58383').should('have.value', '58383');
+      cy.get(`[data-cy="exercise"]`).type('91220').should('have.value', '91220');
 
-      cy.get(`[data-cy="meals"]`).type('96341').should('have.value', '96341');
+      cy.get(`[data-cy="meals"]`).type('32097').should('have.value', '32097');
 
-      cy.get(`[data-cy="alcohol"]`).type('43411').should('have.value', '43411');
+      cy.get(`[data-cy="alcohol"]`).type('98071').should('have.value', '98071');
 
-      cy.get(`[data-cy="notes"]`).type('Response').should('have.value', 'Response');
+      cy.get(`[data-cy="notes"]`).type('next-generation expedite').should('have.value', 'next-generation expedite');
 
       cy.get(entityCreateSaveButtonSelector).click();
 

@@ -65,10 +65,9 @@ management:
   health:
     mail:
       enabled: false # When using the MailService, configure an SMTP server and set this to true
-  metrics:
-    export:
-      # Prometheus is the default metrics backend
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
         step: 60
     enable:
@@ -128,15 +127,12 @@ spring:
     hibernate:
       ddl-auto: none
       naming:
-        physical-strategy: org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
         implicit-strategy: org.springframework.boot.orm.jpa.hibernate.SpringImplicitNamingStrategy
   messages:
     basename: i18n/messages
   main:
     allow-bean-definition-overriding: true
-  mvc:
-    pathmatch:
-      matching-strategy: ant_path_matcher
   task:
     execution:
       thread-name-prefix: health-points-task-
@@ -154,6 +150,9 @@ spring:
     ansi:
       console-available: true
   security:
+    user:
+      name: admin
+      password: admin
     oauth2:
       client:
         provider:
@@ -165,6 +164,8 @@ spring:
             client-secret: web_app
             scope: openid, profile, email, offline_access # last one for refresh tokens
 
+  jersey:
+    application-path: /scim
 server:
   servlet:
     session:
@@ -226,3 +227,4 @@ jhipster:
 # ===================================================================
 
 # application:
+

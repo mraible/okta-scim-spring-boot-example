@@ -1,12 +1,13 @@
 package com.okta.developer.web.rest;
 
+import com.okta.developer.domain.User;
+import com.okta.developer.security.SecurityUtils;
 import com.okta.developer.service.UserService;
 import com.okta.developer.service.dto.AdminUserDTO;
-import java.security.Principal;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,18 +39,21 @@ public class AccountResource {
     /**
      * {@code GET  /account} : get the current user.
      *
-     * @param principal the current user; resolves to {@code null} if not authenticated.
      * @return the current user.
      * @throws AccountResourceException {@code 500 (Internal Server Error)} if the user couldn't be returned.
      */
     @GetMapping("/account")
-    @SuppressWarnings("unchecked")
-    public AdminUserDTO getAccount(Principal principal) {
-        if (principal instanceof AbstractAuthenticationToken) {
-            return userService.getUserFromAuthentication((AbstractAuthenticationToken) principal);
-        } else {
-            throw new AccountResourceException("User could not be found");
+    public AdminUserDTO getAccount() {
+        Optional<String> email = SecurityUtils.getCurrentUserLogin();
+
+        if (email.isPresent()) {
+            Optional<User> user = userService.getUserWithAuthoritiesByLogin(email.get());
+            if (user.isPresent()) {
+                return new AdminUserDTO(user.get());
+            }
         }
+
+        throw new AccountResourceException("User could not be found");
     }
 
     /**
