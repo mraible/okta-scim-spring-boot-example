@@ -5,16 +5,12 @@ import com.okta.developer.domain.Authority;
 import com.okta.developer.domain.User;
 import com.okta.developer.repository.AuthorityRepository;
 import com.okta.developer.repository.UserRepository;
-import jakarta.annotation.PostConstruct;
 import jakarta.ws.rs.core.Response;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.directory.scim.core.repository.Repository;
 import org.apache.directory.scim.core.repository.UpdateRequest;
@@ -36,24 +32,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
-/**
- * Creates a singleton (effectively) Provider<User> with a memory-based
- * persistence layer.
- *
- * @author Chris Harm &lt;crh5255@psu.edu&gt;
- */
 @Service
 public class ScimUserService implements Repository<ScimUser> {
 
     private final Logger log = LoggerFactory.getLogger(ScimUserService.class);
-
-    static final String DEFAULT_USER_ID = "1";
-    static final String DEFAULT_USER_EXTERNAL_ID = "e" + DEFAULT_USER_ID;
-    static final String DEFAULT_USER_DISPLAY_NAME = "User " + DEFAULT_USER_ID;
-    static final String DEFAULT_USER_EMAIL_VALUE = "e1@example.com";
-    static final String DEFAULT_USER_EMAIL_TYPE = "work";
-
-    private final Map<String, ScimUser> users = new HashMap<>();
 
     private final SchemaRegistry schemaRegistry;
     private final UserRepository userRepository;
@@ -73,24 +55,6 @@ public class ScimUserService implements Repository<ScimUser> {
         this.cacheManager = cacheManager;
     }
 
-    @PostConstruct
-    public void init() {
-        ScimUser user = new ScimUser();
-        user.setId(DEFAULT_USER_ID);
-        user.setExternalId(DEFAULT_USER_EXTERNAL_ID);
-        user.setUserName(DEFAULT_USER_EXTERNAL_ID);
-        user.setDisplayName(DEFAULT_USER_DISPLAY_NAME);
-        user.setName(new Name().setGivenName("Tester").setFamilyName("McTest"));
-        Email email = new Email();
-        email.setDisplay(DEFAULT_USER_EMAIL_VALUE);
-        email.setValue(DEFAULT_USER_EMAIL_VALUE);
-        email.setType(DEFAULT_USER_EMAIL_TYPE);
-        email.setPrimary(true);
-        user.setEmails(List.of(email));
-
-        users.put(user.getId(), user);
-    }
-
     @Override
     public Class<ScimUser> getResourceClass() {
         return ScimUser.class;
@@ -107,27 +71,23 @@ public class ScimUserService implements Repository<ScimUser> {
         if (user.isPresent()) {
             throw new UnableToCreateResourceException(Response.Status.CONFLICT, "User '" + resource.getUserName() + "' already exists.");
         } else {
-            resource.setId(UUID.randomUUID().toString()); // TODO: this should probably be configured in the persistence layer?
-            saveUserFromIdP(resource);
+            resource.setId(resource.getExternalId());
+            saveUser(resource);
         }
 
         return resource;
     }
 
-    private ScimUser saveUserFromIdP(ScimUser scimUser) {
+    private void saveUser(ScimUser scimUser) {
         // save authorities in to sync user roles/groups between IdP and JHipster's local database
         Collection<String> dbAuthorities = authorityRepository.findAll().stream().map(Authority::getName).toList();
-        List<ResourceReference> groups = scimUser.getGroups();
-
-        if (groups != null) {
-            Collection<String> userAuthorities = groups.stream().map(ResourceReference::getValue).toList();
-            for (String authority : userAuthorities) {
-                if (!dbAuthorities.contains(authority)) {
-                    log.debug("Saving authority '{}' in local database", authority);
-                    Authority authorityToSave = new Authority();
-                    authorityToSave.setName(authority);
-                    authorityRepository.save(authorityToSave);
-                }
+        Collection<String> userAuthorities = scimUser.getGroups().stream().map(ResourceReference::getValue).toList();
+        for (String authority : userAuthorities) {
+            if (!dbAuthorities.contains(authority)) {
+                log.debug("Saving authority '{}' in local database", authority);
+                Authority authorityToSave = new Authority();
+                authorityToSave.setName(authority);
+                authorityRepository.save(authorityToSave);
             }
         }
 
@@ -135,19 +95,24 @@ public class ScimUserService implements Repository<ScimUser> {
         log.debug(scimUser.toString());
 
         User user = new User();
-        user.setId(scimUser.getId());
-        user.setEmail(scimUser.getPrimaryEmailAddress().get().getValue());
-        user.setLogin(scimUser.getExternalId());
+        user.setId(scimUser.getExternalId());
+        if (scimUser.getPrimaryEmailAddress().isPresent()) {
+            user.setEmail(scimUser.getPrimaryEmailAddress().get().getValue());
+        }
+        user.setLogin(user.getEmail().toLowerCase().toLowerCase(Locale.ROOT));
         user.setFirstName(scimUser.getName().getGivenName());
         user.setLastName(scimUser.getName().getFamilyName());
         user.setActivated(scimUser.getActive());
         user.setLangKey(scimUser.getLocale() != null ? scimUser.getLocale() : Constants.DEFAULT_LANGUAGE);
+        // trim out country if exists
+        if (user.getLangKey().contains("-")) {
+            user.setLangKey(user.getLangKey().substring(0, user.getLangKey().indexOf("-")));
+        }
         user.setImageUrl(scimUser.getProfileUrl());
+        user.setCreatedBy("scimple");
 
         userRepository.save(user);
         clearUserCaches(user);
-
-        return scimUser;
     }
 
     private void clearUserCaches(User user) {
@@ -163,7 +128,7 @@ public class ScimUserService implements Repository<ScimUser> {
     @Override
     public ScimUser update(UpdateRequest<ScimUser> updateRequest) throws UnableToUpdateResourceException {
         ScimUser resource = updateRequest.getResource();
-        saveUserFromIdP(resource);
+        saveUser(resource);
         return resource;
     }
 
@@ -173,7 +138,20 @@ public class ScimUserService implements Repository<ScimUser> {
     @Override
     public ScimUser get(String id) {
         log.debug("get id: {}", id);
-        return users.get("1");
+        Optional<User> optionalUser = userRepository.findById(id);
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            ScimUser scimUser = new ScimUser();
+            scimUser.setEmails(List.of(new Email().setPrimary(true).setValue(user.getEmail())));
+            scimUser.setUserName(user.getLogin());
+            scimUser.setName(new Name().setGivenName(user.getFirstName()).setFamilyName(user.getLastName()));
+            scimUser.setActive(user.isActivated());
+            scimUser.setLocale(user.getLangKey());
+            scimUser.setProfileUrl(user.getImageUrl());
+            return scimUser;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -182,7 +160,7 @@ public class ScimUserService implements Repository<ScimUser> {
     @Override
     public void delete(String id) {
         log.debug("delete id: {} ", id);
-        users.remove(id);
+        userRepository.deleteById(id);
     }
 
     /**

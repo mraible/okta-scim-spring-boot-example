@@ -52,9 +52,6 @@ public class ScimGroupService implements Repository<ScimGroup> {
     @Override
     @Transactional
     public ScimGroup create(ScimGroup scimGroup) throws ResourceException {
-        // check if authority exists
-        log.debug("check if authority exists, if not, create");
-
         return createOrUpdateGroup(scimGroup);
     }
 
