@@ -46,16 +46,10 @@ jhipster jdl 21-points.jh
 +
 [source,shell]
 ----
+docker compose -f src/main/docker/keycloak.yml up -d
 ./gradlew
 # open a new terminal window
 npm run e2e
-----
-
-. Configure it to use Okta with the https://cli.okta.com[Okta CLI]:
-+
-[source,shell]
-----
-okta apps create jhipster
 ----
 
 == Integrate Apache SCIMple
@@ -79,7 +73,7 @@ implementation "org.apache.directory.scim:scim-spring-boot-starter:${scimpleVers
 ----
 +
 [source,groovy]
-.settings.gradle
+.gradle.properties
 ----
 scimpleVersion=1.0.0-SNAPSHOT
 ----
@@ -115,6 +109,13 @@ import com.okta.developer.domain.User;
 import com.okta.developer.repository.AuthorityRepository;
 import com.okta.developer.repository.UserRepository;
 import jakarta.ws.rs.core.Response;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.apache.directory.scim.core.repository.Repository;
 import org.apache.directory.scim.core.repository.UpdateRequest;
 import org.apache.directory.scim.core.schema.SchemaRegistry;
@@ -134,12 +135,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class ScimUserService implements Repository<ScimUser> {
@@ -460,6 +455,26 @@ public class ScimGroupService implements Repository<ScimGroup> {
 ----
 ====
 
+. Add a default constructor and one for name in `Authority.java`:
++
+[source,java]
+----
+public Authority() {}
+
+public Authority(String name) {
+    this.name = name;
+}
+----
+
+. Add `findByName()` to `AuthorityRepository`:
++
+[source,java]
+----
+public interface AuthorityRepository extends JpaRepository<Authority, String> {
+    Optional<Authority> findByName(String name);
+}
+----
+
 . Turn down logging from Jersey and JAXB:
 +
 [source,xml]
@@ -473,8 +488,20 @@ public class ScimGroupService implements Repository<ScimGroup> {
 [source,yaml]
 .src/main/resources/config/application.yml
 ----
-jersey:
+spring:
+  jersey:
     application-path: /scim
+----
++
+And configure basic authentication to secure the connection from Okta.
++
+[source,yaml]
+----
+spring:
+  security:
+    user:
+      name: <some-value>
+      password: <secure-value>
 ----
 
 . Update `SecurityConfiguration` to skip CSRF for Jersey endpoints:
@@ -514,21 +541,25 @@ public AdminUserDTO getAccount() {
 }
 ----
 
-. Configure basic authentication in Spring Security to secure the connection from Okta.
+
+. Remove `ROLE_ADMIN` and `ROLE_USER` from `src/main/resources/config/liquibase/data/authority.csv` so they aren't exported to Okta. Delete the H2 database:
 +
-[source,yaml]
 ----
-spring:
-  security:
-    user:
-      name: <some-value>
-      password: <secure-value>
+rm -rf build/h2db
 ----
 
-. Start the JHipster app and verify you can log in at http://localhost:8080:
+. Configure the JHipster app to use Okta with the https://cli.okta.com[Okta CLI]:
 +
 [source,shell]
 ----
+okta apps create jhipster
+----
+
+. Start the app and verify you can log in at http://localhost:8080:
++
+[source,shell]
+----
+source .okta.env
 ./gradlew
 ----
 
@@ -556,9 +587,9 @@ Create a SWA app on Okta to test your SCIM settings:
 
 . Put the ngrok URL in the **Base URL** field and append `/scim` to the end. User `userName` for the unique identifier. Select all provisioning actions except for import groups.
 
-. Select **To App** > **Edit** and enable all the provisioning actions, except for sync password.
-
 . Click **Test Connector Configuration**. You can check the ngrok logs at http://localhost:4040.
+
+. Select **To App** > **Edit** and enable all the provisioning actions, except for sync password.
 
 . Go to **Assignments** and assign the `ROLE_USER` group to the app.
 
@@ -574,7 +605,7 @@ Create a SWA app on Okta to test your SCIM settings:
 
 . Go to **Assignments** and assign the `ROLE_ADMIN` group to the app. Then, configure it as a push group too.
 
-. Logout of the JHipster app, then log back in and you'll be able to see the **Administration** menu.
+. Refresh your browser in the JHipster app, and you'll be able to see the **Administration** menu.
 
 == Known issues
 
